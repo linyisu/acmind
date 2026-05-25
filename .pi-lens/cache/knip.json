@@ -1,0 +1,425 @@
+{
+  "success": true,
+  "issues": [
+    {
+      "type": "file",
+      "name": "src/lib/api/tauri.ts",
+      "file": "src/lib/api/tauri.ts"
+    },
+    {
+      "type": "file",
+      "name": "src-tauri/target/debug/build/acmind-4219c492903256c8/out/__global-api-script.js",
+      "file": "src-tauri/target/debug/build/acmind-4219c492903256c8/out/__global-api-script.js"
+    },
+    {
+      "type": "file",
+      "name": "src-tauri/target/debug/build/acmind-1220e93f34bac1cb/out/__global-api-script.js",
+      "file": "src-tauri/target/debug/build/acmind-1220e93f34bac1cb/out/__global-api-script.js"
+    },
+    {
+      "type": "file",
+      "name": "src-tauri/target/debug/build/acmind-eabd6c6bf4fc4165/out/__global-api-script.js",
+      "file": "src-tauri/target/debug/build/acmind-eabd6c6bf4fc4165/out/__global-api-script.js"
+    },
+    {
+      "type": "dependency",
+      "name": "@radix-ui/react-dropdown-menu",
+      "file": "package.json",
+      "line": 16
+    },
+    {
+      "type": "dependency",
+      "name": "@radix-ui/react-popover",
+      "file": "package.json",
+      "line": 18
+    },
+    {
+      "type": "dependency",
+      "name": "@radix-ui/react-select",
+      "file": "package.json",
+      "line": 19
+    },
+    {
+      "type": "dependency",
+      "name": "@radix-ui/react-separator",
+      "file": "package.json",
+      "line": 20
+    },
+    {
+      "type": "dependency",
+      "name": "@radix-ui/react-tooltip",
+      "file": "package.json",
+      "line": 23
+    },
+    {
+      "type": "dependency",
+      "name": "@tailwindcss/typography",
+      "file": "package.json",
+      "line": 24
+    },
+    {
+      "type": "dependency",
+      "name": "@tauri-apps/plugin-log",
+      "file": "package.json",
+      "line": 27
+    },
+    {
+      "type": "dependency",
+      "name": "react-markdown",
+      "file": "package.json",
+      "line": 33
+    },
+    {
+      "type": "dependency",
+      "name": "recharts",
+      "file": "package.json",
+      "line": 35
+    },
+    {
+      "type": "dependency",
+      "name": "remark-gfm",
+      "file": "package.json",
+      "line": 36
+    },
+    {
+      "type": "dependency",
+      "name": "shiki",
+      "file": "package.json",
+      "line": 37
+    },
+    {
+      "type": "dependency",
+      "name": "zustand",
+      "file": "package.json",
+      "line": 40
+    },
+    {
+      "type": "devDependency",
+      "name": "@tauri-apps/cli",
+      "file": "package.json",
+      "line": 45
+    },
+    {
+      "type": "export",
+      "name": "badgeVariants",
+      "file": "src/components/ui/badge.tsx",
+      "line": 38
+    },
+    {
+      "type": "export",
+      "name": "BadgeProps",
+      "file": "src/components/ui/badge.tsx",
+      "line": 28
+    },
+    {
+      "type": "export",
+      "name": "buttonVariants",
+      "file": "src/components/ui/button.tsx",
+      "line": 55
+    },
+    {
+      "type": "export",
+      "name": "ButtonProps",
+      "file": "src/components/ui/button.tsx",
+      "line": 35
+    },
+    {
+      "type": "export",
+      "name": "CardFooter",
+      "file": "src/components/ui/card.tsx",
+      "line": 81
+    },
+    {
+      "type": "export",
+      "name": "CardDescription",
+      "file": "src/components/ui/card.tsx",
+      "line": 83
+    },
+    {
+      "type": "export",
+      "name": "TableFooter",
+      "file": "src/components/ui/table.tsx",
+      "line": 111
+    },
+    {
+      "type": "export",
+      "name": "TableCaption",
+      "file": "src/components/ui/table.tsx",
+      "line": 115
+    },
+    {
+      "type": "export",
+      "name": "DialogPortal",
+      "file": "src/components/ui/dialog.tsx",
+      "line": 107
+    },
+    {
+      "type": "export",
+      "name": "DialogOverlay",
+      "file": "src/components/ui/dialog.tsx",
+      "line": 108
+    },
+    {
+      "type": "export",
+      "name": "DialogClose",
+      "file": "src/components/ui/dialog.tsx",
+      "line": 109
+    },
+    {
+      "type": "export",
+      "name": "DialogFooter",
+      "file": "src/components/ui/dialog.tsx",
+      "line": 113
+    },
+    {
+      "type": "export",
+      "name": "DialogDescription",
+      "file": "src/components/ui/dialog.tsx",
+      "line": 115
+    },
+    {
+      "type": "export",
+      "name": "SubmissionStatus",
+      "file": "src/lib/types.ts",
+      "line": 12
+    },
+    {
+      "type": "export",
+      "name": "ErrorCategory",
+      "file": "src/lib/types.ts",
+      "line": 36
+    },
+    {
+      "type": "export",
+      "name": "KnowledgePoint",
+      "file": "src/lib/types.ts",
+      "line": 58
+    },
+    {
+      "type": "export",
+      "name": "ProblemKnowledgeMap",
+      "file": "src/lib/types.ts",
+      "line": 65
+    },
+    {
+      "type": "export",
+      "name": "Report",
+      "file": "src/lib/types.ts",
+      "line": 71
+    }
+  ],
+  "unusedExports": [
+    {
+      "type": "export",
+      "name": "badgeVariants",
+      "file": "src/components/ui/badge.tsx",
+      "line": 38
+    },
+    {
+      "type": "export",
+      "name": "BadgeProps",
+      "file": "src/components/ui/badge.tsx",
+      "line": 28
+    },
+    {
+      "type": "export",
+      "name": "buttonVariants",
+      "file": "src/components/ui/button.tsx",
+      "line": 55
+    },
+    {
+      "type": "export",
+      "name": "ButtonProps",
+      "file": "src/components/ui/button.tsx",
+      "line": 35
+    },
+    {
+      "type": "export",
+      "name": "CardFooter",
+      "file": "src/components/ui/card.tsx",
+      "line": 81
+    },
+    {
+      "type": "export",
+      "name": "CardDescription",
+      "file": "src/components/ui/card.tsx",
+      "line": 83
+    },
+    {
+      "type": "export",
+      "name": "TableFooter",
+      "file": "src/components/ui/table.tsx",
+      "line": 111
+    },
+    {
+      "type": "export",
+      "name": "TableCaption",
+      "file": "src/components/ui/table.tsx",
+      "line": 115
+    },
+    {
+      "type": "export",
+      "name": "DialogPortal",
+      "file": "src/components/ui/dialog.tsx",
+      "line": 107
+    },
+    {
+      "type": "export",
+      "name": "DialogOverlay",
+      "file": "src/components/ui/dialog.tsx",
+      "line": 108
+    },
+    {
+      "type": "export",
+      "name": "DialogClose",
+      "file": "src/components/ui/dialog.tsx",
+      "line": 109
+    },
+    {
+      "type": "export",
+      "name": "DialogFooter",
+      "file": "src/components/ui/dialog.tsx",
+      "line": 113
+    },
+    {
+      "type": "export",
+      "name": "DialogDescription",
+      "file": "src/components/ui/dialog.tsx",
+      "line": 115
+    },
+    {
+      "type": "export",
+      "name": "SubmissionStatus",
+      "file": "src/lib/types.ts",
+      "line": 12
+    },
+    {
+      "type": "export",
+      "name": "ErrorCategory",
+      "file": "src/lib/types.ts",
+      "line": 36
+    },
+    {
+      "type": "export",
+      "name": "KnowledgePoint",
+      "file": "src/lib/types.ts",
+      "line": 58
+    },
+    {
+      "type": "export",
+      "name": "ProblemKnowledgeMap",
+      "file": "src/lib/types.ts",
+      "line": 65
+    },
+    {
+      "type": "export",
+      "name": "Report",
+      "file": "src/lib/types.ts",
+      "line": 71
+    }
+  ],
+  "unusedFiles": [
+    {
+      "type": "file",
+      "name": "src/lib/api/tauri.ts",
+      "file": "src/lib/api/tauri.ts"
+    },
+    {
+      "type": "file",
+      "name": "src-tauri/target/debug/build/acmind-4219c492903256c8/out/__global-api-script.js",
+      "file": "src-tauri/target/debug/build/acmind-4219c492903256c8/out/__global-api-script.js"
+    },
+    {
+      "type": "file",
+      "name": "src-tauri/target/debug/build/acmind-1220e93f34bac1cb/out/__global-api-script.js",
+      "file": "src-tauri/target/debug/build/acmind-1220e93f34bac1cb/out/__global-api-script.js"
+    },
+    {
+      "type": "file",
+      "name": "src-tauri/target/debug/build/acmind-eabd6c6bf4fc4165/out/__global-api-script.js",
+      "file": "src-tauri/target/debug/build/acmind-eabd6c6bf4fc4165/out/__global-api-script.js"
+    }
+  ],
+  "unusedDeps": [
+    {
+      "type": "dependency",
+      "name": "@radix-ui/react-dropdown-menu",
+      "file": "package.json",
+      "line": 16
+    },
+    {
+      "type": "dependency",
+      "name": "@radix-ui/react-popover",
+      "file": "package.json",
+      "line": 18
+    },
+    {
+      "type": "dependency",
+      "name": "@radix-ui/react-select",
+      "file": "package.json",
+      "line": 19
+    },
+    {
+      "type": "dependency",
+      "name": "@radix-ui/react-separator",
+      "file": "package.json",
+      "line": 20
+    },
+    {
+      "type": "dependency",
+      "name": "@radix-ui/react-tooltip",
+      "file": "package.json",
+      "line": 23
+    },
+    {
+      "type": "dependency",
+      "name": "@tailwindcss/typography",
+      "file": "package.json",
+      "line": 24
+    },
+    {
+      "type": "dependency",
+      "name": "@tauri-apps/plugin-log",
+      "file": "package.json",
+      "line": 27
+    },
+    {
+      "type": "dependency",
+      "name": "react-markdown",
+      "file": "package.json",
+      "line": 33
+    },
+    {
+      "type": "dependency",
+      "name": "recharts",
+      "file": "package.json",
+      "line": 35
+    },
+    {
+      "type": "dependency",
+      "name": "remark-gfm",
+      "file": "package.json",
+      "line": 36
+    },
+    {
+      "type": "dependency",
+      "name": "shiki",
+      "file": "package.json",
+      "line": 37
+    },
+    {
+      "type": "dependency",
+      "name": "zustand",
+      "file": "package.json",
+      "line": 40
+    },
+    {
+      "type": "devDependency",
+      "name": "@tauri-apps/cli",
+      "file": "package.json",
+      "line": 45
+    }
+  ],
+  "unlistedDeps": [],
+  "summary": "Found 35 issues"
+}
