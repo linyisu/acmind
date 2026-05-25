@@ -49,6 +49,8 @@ src-tauri/
 
 ### 4. Read Before Write
 - Always read the file you're about to edit before making changes.
+- During iterative edits, prefer targeted compile/type checks over repeated formatting to avoid unnecessary file churn.
+- Only run formatting and Clippy as the final pre-commit gate, right before committing.
 - For Rust: check compilation with `cargo check` before committing.
 - For TypeScript: check with `pnpm tsc -b`.
 
@@ -75,7 +77,9 @@ src-tauri/
 - Custom ACM theme colors: `success`, `warning`, `error` (defined in `globals.css`).
 
 ## Code Review Checklist
-Before marking work as done:
+Before committing work:
+- [ ] Run formatting once at the end (`cargo fmt --manifest-path src-tauri/Cargo.toml` and applicable frontend formatter)
+- [ ] Rust Clippy passes (`cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings`)
 - [ ] All tests pass (`pnpm test` + `cargo test`)
 - [ ] TypeScript compiles (`pnpm tsc -b`)
 - [ ] Rust compiles (`cargo check`)
