@@ -1,6 +1,15 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Plus, Trash2, Code, FileText, Brain, Sparkles, Loader2 } from "lucide-react";
+import {
+	ArrowLeft,
+	Plus,
+	Trash2,
+	Code,
+	FileText,
+	Brain,
+	Sparkles,
+	Loader2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -152,7 +161,8 @@ export function ProblemDetailPage() {
 			setAnalyzing(false);
 		},
 		onError: (err) => {
-			setAnalysisError(err instanceof Error ? err.message : "Analysis failed");
+			// Tauri errors come as strings, not Error objects
+			setAnalysisError(typeof err === "string" ? err : err instanceof Error ? err.message : "Analysis failed");
 			setAnalyzing(false);
 		},
 	});

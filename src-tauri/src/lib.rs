@@ -8,6 +8,7 @@ use db::init_db;
 use storage::Storage;
 use tauri::Manager;
 use std::path::PathBuf;
+use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -16,6 +17,25 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .setup(|app| {
+            // Initialize tracing: console + file logging
+            let app_data_dir = get_app_data_dir(app);
+            let log_file = app_data_dir.join("acmind.log");
+
+            let file_appender = tracing_appender::rolling::never(&app_data_dir, "acmind.log");
+            let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
+
+            let env_filter = EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| EnvFilter::new("info,acmind=debug,reqwest=warn"));
+
+            tracing_subscriber::registry()
+                .with(env_filter)
+                .with(fmt::layer().with_writer(std::io::stderr).pretty())
+                .with(fmt::layer().with_writer(non_blocking).with_ansi(false))
+                .try_init()
+                .ok(); // Ignore if already initialized (double-setup guard)
+
+            tracing::info!("ACMind starting, log file: {:?}", log_file);
+
             if cfg!(debug_assertions) {
                 app.handle().plugin(
                     tauri_plugin_log::Builder::default()
@@ -28,6 +48,8 @@ pub fn run() {
             let app_data_dir = get_app_data_dir(app);
             let pool = tauri::async_runtime::block_on(init_db(&app_data_dir))
                 .expect("Failed to initialize database");
+
+            tracing::info!("Database initialized at {:?}", app_data_dir.join("acmind.sqlite"));
 
             app.manage(pool);
 

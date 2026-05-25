@@ -4,6 +4,7 @@ use crate::db::repo;
 use crate::error::AppError;
 use crate::storage::Storage;
 use sqlx::SqlitePool;
+use tracing::info;
 
 // -- Problems --
 
@@ -312,7 +313,45 @@ pub async fn analyze_problem(
     pool: State<'_, SqlitePool>,
     problem_id: String,
 ) -> Result<crate::ai::AnalysisResult, AppError> {
-    crate::ai::analyze_problem(&pool, &problem_id).await
+    info!("analyze_problem command called for problem {}", problem_id);
+    let analysis = crate::ai::analyze_problem(&pool, &problem_id).await?;
+
+    // Save error analysis to DB (attach to first WA submission)
+    let submissions = repo::list_submissions_by_problem(&pool, &problem_id).await?;
+    if let Some(wa_sub) = submissions.iter().find(|s| s.status == "WA") {
+        let error_input = crate::db::models::CreateErrorInput {
+            problem_id: problem_id.clone(),
+            submission_id: wa_sub.id.clone(),
+            error_type: analysis.error_type.clone(),
+            root_cause: analysis.root_cause.clone(),
+            fix_summary: analysis.fix_summary.clone(),
+            related_knowledge: analysis.knowledge_points.clone(),
+        };
+        repo::create_error_analysis(&pool, &error_input).await?;
+    }
+
+    // Save suggestions as an AI note
+    let note_content = format!(
+        "# AI Analysis\n\n## Root Cause\n{}\n\n## Fix\n{}\n\n## Suggestions\n{}",
+        analysis.root_cause,
+        analysis.fix_summary,
+        analysis
+            .suggestions
+            .iter()
+            .map(|s| format!("- {}", s))
+            .collect::<Vec<_>>()
+            .join("\n")
+    );
+
+    let note_input = crate::db::models::CreateNoteInput {
+        problem_id,
+        note_type: "ai".into(),
+        content: note_content,
+        source_url: None,
+    };
+    repo::create_note(&pool, &note_input).await?;
+
+    Ok(analysis)
 }
 
 // -- Dashboard --

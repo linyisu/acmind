@@ -2,6 +2,7 @@ use crate::db::repo;
 use crate::error::AppError;
 use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
+use tracing::{error, info, instrument, warn};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AnalysisResult {
@@ -13,6 +14,7 @@ pub struct AnalysisResult {
 }
 
 /// Analyze a problem's WA and AC codes against the statement and solutions.
+#[instrument(skip(pool), fields(problem_id = %problem_id))]
 pub async fn analyze_problem(
     pool: &SqlitePool,
     problem_id: &str,
@@ -31,9 +33,17 @@ pub async fn analyze_problem(
         .await?
         .unwrap_or_default();
 
+    info!(
+        provider = %provider,
+        model = %model,
+        has_key = !api_key.is_empty(),
+        "Starting AI analysis"
+    );
+
     if api_key.is_empty() {
+        warn!("AI analysis blocked: no API key configured");
         return Err(AppError::InvalidInput(
-            "Please configure AI API key in Settings first.".into(),
+            "Please configure AI API key in Settings first. Go to Settings → AI Provider and enter your API key.".into(),
         ));
     }
 
@@ -42,15 +52,25 @@ pub async fn analyze_problem(
     let submissions = repo::list_submissions_by_problem(pool, problem_id).await?;
     let notes = repo::list_notes_by_problem(pool, problem_id).await?;
 
+    info!(
+        problem = %problem.title,
+        submissions = submissions.len(),
+        notes = notes.len(),
+        "Loaded problem data"
+    );
+
     // Build the analysis prompt
     let prompt = build_analysis_prompt(&problem.title, &submissions, &notes);
 
     // Call the AI API
+    info!("Calling {} API with model {}", provider, model);
     let response = match provider.as_str() {
         "anthropic" => call_anthropic(&api_key, &model, &prompt).await?,
         "google" => call_gemini(&api_key, &model, &prompt).await?,
         _ => call_openai_compatible(&api_key, &model, &base_url, &prompt).await?,
     };
+
+    info!("AI response received ({} bytes)", response.len());
 
     // Parse JSON from response
     parse_analysis_response(&response)
@@ -119,7 +139,17 @@ fn parse_analysis_response(response: &str) -> Result<AnalysisResult, AppError> {
     };
 
     let result: AnalysisResult = serde_json::from_str(json_str.trim())
-        .map_err(|e| AppError::AiError(format!("Failed to parse AI response: {}", e)))?;
+        .map_err(|e| {
+            error!("Failed to parse AI JSON response: {}", e);
+            error!("Raw response (first 500 chars): {}", &response[..response.len().min(500)]);
+            AppError::AiError(format!("Failed to parse AI response: {}", e))
+        })?;
+
+    info!(
+        error_type = %result.error_type,
+        root_cause = %result.root_cause,
+        "AI analysis completed successfully"
+    );
 
     Ok(result)
 }
