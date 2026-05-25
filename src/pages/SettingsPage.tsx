@@ -18,7 +18,8 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { useState } from "react";
-import { Save, Key, Cpu, Globe } from "lucide-react";
+import i18n from "@/lib/i18n";
+import { Save, Key, Cpu, Globe, Languages } from "lucide-react";
 
 interface AppSetting {
 	key: string;
@@ -43,6 +44,11 @@ const AI_PROVIDERS = [
 	{ value: "custom", label: "Custom (OpenAI-compatible)" },
 ];
 
+const LOCALES = [
+	{ value: "zh", label: "中文" },
+	{ value: "en", label: "English" },
+];
+
 export function SettingsPage() {
 	const queryClient = useQueryClient();
 
@@ -56,6 +62,7 @@ export function SettingsPage() {
 	const [apiKey, setApiKey] = useState("");
 	const [model, setModel] = useState("");
 	const [baseUrl, setBaseUrl] = useState("");
+	const [locale, setLocale] = useState("zh");
 	const [saved, setSaved] = useState(false);
 	const [error, setError] = useState("");
 
@@ -71,6 +78,7 @@ export function SettingsPage() {
 		setApiKey(settingsMap.ai_api_key ?? "");
 		setModel(settingsMap.ai_model ?? "gpt-4o");
 		setBaseUrl(settingsMap.ai_base_url ?? "");
+		setLocale(settingsMap.app_locale ?? "zh");
 		setInitialized(true);
 	}
 
@@ -81,6 +89,8 @@ export function SettingsPage() {
 			await api("set_setting", { key: "ai_api_key", value: apiKey });
 			await api("set_setting", { key: "ai_model", value: model });
 			await api("set_setting", { key: "ai_base_url", value: baseUrl });
+			await api("set_setting", { key: "app_locale", value: locale });
+			await i18n.changeLanguage(locale);
 		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["settings"] });
@@ -88,17 +98,16 @@ export function SettingsPage() {
 			setTimeout(() => setSaved(false), 3000);
 		},
 		onError: (err) => {
-			setError(err instanceof Error ? err.message : "Failed to save");
+			setError(err instanceof Error ? err.message : "保存失败");
 		},
 	});
 
 	return (
 		<div className="space-y-6 max-w-2xl">
 			<div>
-				<h1 className="text-2xl font-bold">Settings</h1>
+				<h1 className="text-2xl font-bold">设置</h1>
 				<p className="text-muted-foreground">
-					Configure your AI provider for automatic analysis and report
-					generation
+					配置语言和 AI 提供商，用于自动分析与报告生成
 				</p>
 			</div>
 
@@ -107,24 +116,56 @@ export function SettingsPage() {
 					<Skeleton className="h-48 w-full" />
 				</div>
 			) : (
-				<Card>
+				<>
+					<Card className="mb-6">
+					<CardHeader>
+						<CardTitle className="flex items-center gap-2">
+							<Languages className="h-5 w-5" />
+							语言
+						</CardTitle>
+						<CardDescription>
+							选择界面语言，同时影响 AI 分析提示词和输出语言。
+						</CardDescription>
+					</CardHeader>
+					<CardContent>
+						<div className="grid gap-2">
+							<Label htmlFor="locale">应用语言</Label>
+							<Select value={locale} onValueChange={setLocale}>
+								<SelectTrigger id="locale">
+									<SelectValue placeholder="选择语言" />
+								</SelectTrigger>
+								<SelectContent>
+									{LOCALES.map((item) => (
+										<SelectItem key={item.value} value={item.value}>
+											{item.label}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+							<p className="text-xs text-muted-foreground">
+								保存后，后端 AI 提示词会使用同一语言。
+							</p>
+						</div>
+					</CardContent>
+					</Card>
+
+					<Card>
 					<CardHeader>
 						<CardTitle className="flex items-center gap-2">
 							<Cpu className="h-5 w-5" />
-							AI Provider
+							AI 提供商
 						</CardTitle>
 						<CardDescription>
-							Configure which AI service to use for problem analysis, error
-							detection, and training reports.
+							配置用于题目分析、错误检测和训练报告的 AI 服务。
 						</CardDescription>
 					</CardHeader>
 					<CardContent className="space-y-6">
 						{/* Provider */}
 						<div className="grid gap-2">
-							<Label htmlFor="provider">Provider</Label>
+							<Label htmlFor="provider">提供商</Label>
 							<Select value={provider} onValueChange={setProvider}>
 								<SelectTrigger id="provider">
-									<SelectValue placeholder="Select provider" />
+									<SelectValue placeholder="选择提供商" />
 								</SelectTrigger>
 								<SelectContent>
 									{AI_PROVIDERS.map((p) => (
@@ -150,8 +191,7 @@ export function SettingsPage() {
 								placeholder="sk-..."
 							/>
 							<p className="text-xs text-muted-foreground">
-								Your API key is stored locally and never sent anywhere except to
-								the provider you choose above.
+								你的 API Key 只会保存在本地，并且只发送给上面选择的提供商。
 							</p>
 						</div>
 
@@ -165,7 +205,7 @@ export function SettingsPage() {
 								placeholder="gpt-4o / claude-sonnet-4-20250514 / gemini-2.5-pro"
 							/>
 							<p className="text-xs text-muted-foreground">
-								Common: gpt-4o (OpenAI), claude-sonnet-4-20250514 (Anthropic),
+								常用：gpt-4o (OpenAI)、claude-sonnet-4-20250514 (Anthropic)、
 								gemini-2.5-pro (Google)
 							</p>
 						</div>
@@ -186,7 +226,8 @@ export function SettingsPage() {
 							</div>
 						)}
 					</CardContent>
-				</Card>
+					</Card>
+				</>
 			)}
 
 			{/* Error */}
@@ -203,12 +244,10 @@ export function SettingsPage() {
 					disabled={saveMutation.isPending || !provider}
 				>
 					<Save className="mr-2 h-4 w-4" />
-					{saveMutation.isPending ? "Saving..." : "Save Settings"}
+					{saveMutation.isPending ? "保存中..." : "保存设置"}
 				</Button>
 				{saved && (
-					<span className="text-sm text-success">
-						✓ Settings saved successfully
-					</span>
+					<span className="text-sm text-success">✓ 设置已保存</span>
 				)}
 			</div>
 		</div>
