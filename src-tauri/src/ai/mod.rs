@@ -14,8 +14,34 @@ pub struct AnalysisResult {
     pub suggestions: Vec<String>,
 }
 
-const AI_SYSTEM_PROMPT: &str =
-    "你是一名专业的算法竞赛教练。请始终只返回有效 JSON，不要输出额外解释。";
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum AiPromptLocale {
+    Zh,
+    En,
+}
+
+impl AiPromptLocale {
+    fn from_setting(value: Option<String>) -> Self {
+        match value.as_deref() {
+            Some("en") | Some("en-US") | Some("en_US") => Self::En,
+            _ => Self::Zh,
+        }
+    }
+
+    fn system_prompt(self) -> &'static str {
+        match self {
+            Self::Zh => "你是一名专业的算法竞赛教练。请始终只返回有效 JSON，不要输出额外解释。",
+            Self::En => "You are an expert algorithm coach. Always respond with valid JSON only, with no extra explanation.",
+        }
+    }
+
+    fn no_note(self) -> &'static str {
+        match self {
+            Self::Zh => "无",
+            Self::En => "none",
+        }
+    }
+}
 
 /// Analyze a problem's WA and AC codes against the statement and solutions.
 #[instrument(skip(pool), fields(problem_id = %problem_id))]
@@ -36,6 +62,8 @@ pub async fn analyze_problem(
     let base_url = repo::get_setting(pool, "ai_base_url")
         .await?
         .unwrap_or_default();
+
+    let prompt_locale = AiPromptLocale::from_setting(repo::get_setting(pool, "app_locale").await?);
 
     info!(
         provider = %provider,
@@ -64,14 +92,14 @@ pub async fn analyze_problem(
     );
 
     // Build the analysis prompt
-    let prompt = build_analysis_prompt(&problem.title, &submissions, &notes);
+    let prompt = build_analysis_prompt(&problem.title, &submissions, &notes, prompt_locale);
 
     // Call the AI API
     info!("Calling {} API with model {}", provider, model);
     let response = match provider.as_str() {
-        "anthropic" => call_anthropic(&api_key, &model, &prompt).await?,
+        "anthropic" => call_anthropic(&api_key, &model, &prompt, prompt_locale).await?,
         "google" => call_gemini(&api_key, &model, &prompt).await?,
-        _ => call_openai_compatible(&api_key, &model, &base_url, &prompt).await?,
+        _ => call_openai_compatible(&api_key, &model, &base_url, &prompt, prompt_locale).await?,
     };
 
     info!("AI response received ({} bytes)", response.len());
@@ -84,41 +112,74 @@ fn build_analysis_prompt(
     title: &str,
     submissions: &[crate::db::models::Submission],
     notes: &[crate::db::models::SolutionNote],
+    locale: AiPromptLocale,
 ) -> String {
-    let mut prompt = format!(
-        "你是一名 ACM/ICPC 训练教练。请分析下面的题目、提交记录和笔记。\n\n\
-        题目：{}\n\n\
-        提交记录：\n",
-        title
-    );
+    let mut prompt = match locale {
+        AiPromptLocale::Zh => format!(
+            "你是一名 ACM/ICPC 训练教练。请分析下面的题目、提交记录和笔记。\n\n\
+            题目：{}\n\n\
+            提交记录：\n",
+            title
+        ),
+        AiPromptLocale::En => format!(
+            "You are an ACM/ICPC training coach. Analyze the following problem, submissions, and notes.\n\n\
+            Problem: {}\n\n\
+            Submissions:\n",
+            title
+        ),
+    };
 
     for sub in submissions {
-        prompt.push_str(&format!(
-            "- 状态：{}，语言：{}，备注：{}\n",
-            sub.status,
-            sub.language,
-            sub.note.as_deref().unwrap_or("无")
-        ));
+        match locale {
+            AiPromptLocale::Zh => prompt.push_str(&format!(
+                "- 状态：{}，语言：{}，备注：{}\n",
+                sub.status,
+                sub.language,
+                sub.note.as_deref().unwrap_or(locale.no_note())
+            )),
+            AiPromptLocale::En => prompt.push_str(&format!(
+                "- Status: {}, Language: {}, Note: {}\n",
+                sub.status,
+                sub.language,
+                sub.note.as_deref().unwrap_or(locale.no_note())
+            )),
+        }
     }
 
     if !notes.is_empty() {
-        prompt.push_str("\n笔记：\n");
+        match locale {
+            AiPromptLocale::Zh => prompt.push_str("\n笔记：\n"),
+            AiPromptLocale::En => prompt.push_str("\nNotes:\n"),
+        }
         for note in notes {
             prompt.push_str(&format!("- [{}] {}\n", note.note_type, note.content));
         }
     }
 
-    prompt.push_str(
-        "\n请基于以上信息，返回一个 JSON 分析对象，字段必须严格如下（字段名保持英文，不要翻译）：\n\
-        {\n\
-          \"knowledge_points\": [\"涉及的算法或数据结构标签，例如 dp、graph、greedy\"],\n\
-          \"error_type\": \"只能是以下之一：logic、boundary、overflow、index、initialization、complexity、template、misread、other\",\n\
-          \"root_cause\": \"用中文详细说明错误根因\",\n\
-          \"fix_summary\": \"用中文简明说明修复方式\",\n\
-          \"suggestions\": [\"3-5 条中文、具体、可执行的改进建议\"]\n\
-        }\n\n\
-        只返回有效 JSON，不要返回 Markdown、代码块或任何额外文本。",
-    );
+    match locale {
+        AiPromptLocale::Zh => prompt.push_str(
+            "\n请基于以上信息，返回一个 JSON 分析对象，字段必须严格如下（字段名保持英文，不要翻译）：\n\
+            {\n\
+              \"knowledge_points\": [\"涉及的算法或数据结构标签，例如 dp、graph、greedy\"],\n\
+              \"error_type\": \"只能是以下之一：logic、boundary、overflow、index、initialization、complexity、template、misread、other\",\n\
+              \"root_cause\": \"用中文详细说明错误根因\",\n\
+              \"fix_summary\": \"用中文简明说明修复方式\",\n\
+              \"suggestions\": [\"3-5 条中文、具体、可执行的改进建议\"]\n\
+            }\n\n\
+            只返回有效 JSON，不要返回 Markdown、代码块或任何额外文本。",
+        ),
+        AiPromptLocale::En => prompt.push_str(
+            "\nBased on the above, return a JSON analysis object with exactly these fields (keep field names in English):\n\
+            {\n\
+              \"knowledge_points\": [\"algorithm/data-structure tags involved, such as dp, graph, greedy\"],\n\
+              \"error_type\": \"one of: logic, boundary, overflow, index, initialization, complexity, template, misread, other\",\n\
+              \"root_cause\": \"detailed root cause of the failure in English\",\n\
+              \"fix_summary\": \"concise fix explanation in English\",\n\
+              \"suggestions\": [\"3-5 specific, actionable improvement suggestions in English\"]\n\
+            }\n\n\
+            Return valid JSON only. Do not return Markdown, code fences, or any extra text.",
+        ),
+    }
 
     prompt
 }
@@ -198,6 +259,7 @@ async fn call_openai_compatible(
     model: &str,
     base_url: &str,
     prompt: &str,
+    prompt_locale: AiPromptLocale,
 ) -> Result<String, AppError> {
     let url = if base_url.is_empty() {
         "https://api.openai.com/v1/chat/completions".to_string()
@@ -208,7 +270,7 @@ async fn call_openai_compatible(
     let body = serde_json::json!({
         "model": model,
         "messages": [
-            {"role": "system", "content": AI_SYSTEM_PROMPT},
+            {"role": "system", "content": prompt_locale.system_prompt()},
             {"role": "user", "content": prompt}
         ],
         "temperature": 0.3,
@@ -246,14 +308,19 @@ async fn call_openai_compatible(
 
 // -- Anthropic (Claude) API --
 
-async fn call_anthropic(api_key: &str, model: &str, prompt: &str) -> Result<String, AppError> {
+async fn call_anthropic(
+    api_key: &str,
+    model: &str,
+    prompt: &str,
+    prompt_locale: AiPromptLocale,
+) -> Result<String, AppError> {
     let body = serde_json::json!({
         "model": model,
         "max_tokens": 1024,
         "messages": [
             {"role": "user", "content": prompt}
         ],
-        "system": AI_SYSTEM_PROMPT
+        "system": prompt_locale.system_prompt()
     });
 
     let client = reqwest::Client::new();
@@ -358,6 +425,7 @@ pub async fn analyze_problem_streaming(
     let base_url = repo::get_setting(pool, "ai_base_url")
         .await?
         .unwrap_or_default();
+    let prompt_locale = AiPromptLocale::from_setting(repo::get_setting(pool, "app_locale").await?);
 
     info!("Starting streaming AI analysis");
 
@@ -371,20 +439,27 @@ pub async fn analyze_problem_streaming(
     let submissions = repo::list_submissions_by_problem(pool, problem_id).await?;
     let notes = repo::list_notes_by_problem(pool, problem_id).await?;
 
-    let prompt = build_analysis_prompt(&problem.title, &submissions, &notes);
+    let prompt = build_analysis_prompt(&problem.title, &submissions, &notes, prompt_locale);
 
     let response = match provider.as_str() {
         "anthropic" => {
             on_chunk("（Anthropic 暂不支持流式输出，请稍等...）\n");
-            call_anthropic(&api_key, &model, &prompt).await?
+            call_anthropic(&api_key, &model, &prompt, prompt_locale).await?
         }
         "google" => {
             on_chunk("（Gemini 暂不支持流式输出，请稍等...）\n");
             call_gemini(&api_key, &model, &prompt).await?
         }
         _ => {
-            call_openai_compatible_streaming(&api_key, &model, &base_url, &prompt, &on_chunk)
-                .await?
+            call_openai_compatible_streaming(
+                &api_key,
+                &model,
+                &base_url,
+                &prompt,
+                prompt_locale,
+                &on_chunk,
+            )
+            .await?
         }
     };
 
@@ -398,6 +473,7 @@ async fn call_openai_compatible_streaming(
     model: &str,
     base_url: &str,
     prompt: &str,
+    prompt_locale: AiPromptLocale,
     on_chunk: &impl Fn(&str),
 ) -> Result<String, AppError> {
     let url = if base_url.is_empty() {
@@ -409,7 +485,7 @@ async fn call_openai_compatible_streaming(
     let body = serde_json::json!({
         "model": model,
         "messages": [
-            {"role": "system", "content": AI_SYSTEM_PROMPT},
+            {"role": "system", "content": prompt_locale.system_prompt()},
             {"role": "user", "content": prompt}
         ],
         "temperature": 0.3,
@@ -481,7 +557,9 @@ fn append_openai_stream_line(line: &str, full_text: &mut String, on_chunk: &impl
 
 #[cfg(test)]
 mod tests {
-    use super::{append_openai_stream_line, parse_analysis_response};
+    use super::{
+        append_openai_stream_line, build_analysis_prompt, parse_analysis_response, AiPromptLocale,
+    };
 
     #[test]
     fn appends_openai_stream_content_delta() {
@@ -508,6 +586,24 @@ mod tests {
 
         assert!(full_text.is_empty());
         assert!(chunks.is_empty());
+    }
+
+    #[test]
+    fn builds_chinese_analysis_prompt_by_default_locale() {
+        let prompt = build_analysis_prompt("两数之和", &[], &[], AiPromptLocale::Zh);
+
+        assert!(prompt.contains("题目：两数之和"));
+        assert!(prompt.contains("用中文详细说明错误根因"));
+        assert!(!prompt.contains("Problem:"));
+    }
+
+    #[test]
+    fn builds_english_analysis_prompt_when_locale_is_en() {
+        let prompt = build_analysis_prompt("Two Sum", &[], &[], AiPromptLocale::En);
+
+        assert!(prompt.contains("Problem: Two Sum"));
+        assert!(prompt.contains("root cause of the failure in English"));
+        assert!(!prompt.contains("题目："));
     }
 
     #[test]
