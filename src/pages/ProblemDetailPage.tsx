@@ -162,7 +162,13 @@ export function ProblemDetailPage() {
 		},
 		onError: (err) => {
 			// Tauri errors come as strings, not Error objects
-			setAnalysisError(typeof err === "string" ? err : err instanceof Error ? err.message : "Analysis failed");
+			setAnalysisError(
+				typeof err === "string"
+					? err
+					: err instanceof Error
+						? err.message
+						: "Analysis failed",
+			);
 			setAnalyzing(false);
 		},
 	});
