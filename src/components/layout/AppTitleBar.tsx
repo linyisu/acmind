@@ -64,7 +64,7 @@ export function AppTitleBar() {
 				</div>
 				<div className="min-w-0">
 					<div className="truncate text-sm font-semibold leading-4 tracking-tight">
-						ACM Insight
+						ACMind
 					</div>
 					<div className="truncate text-[10px] leading-3 text-muted-foreground">
 						算法训练工作台
@@ -72,7 +72,10 @@ export function AppTitleBar() {
 				</div>
 			</div>
 
-			<div className="flex h-full" onMouseDown={(event) => event.stopPropagation()}>
+			<div
+				className="flex h-full"
+				onMouseDown={(event) => event.stopPropagation()}
+			>
 				<TitleBarButton label="最小化" onClick={minimize}>
 					<Minus className="h-3.5 w-3.5" />
 				</TitleBarButton>

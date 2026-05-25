@@ -5,7 +5,7 @@ export const resources = {
 	zh: {
 		translation: {
 			app: {
-				name: "ACM Insight",
+				name: "ACMind",
 			},
 			nav: {
 				dashboard: "仪表盘",

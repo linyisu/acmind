@@ -84,7 +84,7 @@
   --sidebar-border: oklch(0.922 0.004 247.839);
   --sidebar-ring: oklch(0.708 0.017 247.839);
 
-  /* ACM Insight custom colors */
+  /* ACMind custom colors */
   --success: oklch(0.627 0.194 149.214);
   --success-foreground: oklch(0.985 0 0);
   --warning: oklch(0.795 0.184 86.047);

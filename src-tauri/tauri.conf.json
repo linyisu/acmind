@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "ACM Insight",
+        "title": "ACMind",
         "width": 800,
         "height": 600,
         "resizable": true,
