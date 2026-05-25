@@ -10,23 +10,38 @@ use tauri::Manager;
 use std::path::PathBuf;
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
-#[cfg_attr(mobile, tauri::mobile_entry_point)]
-pub fn run() {
-    // Tracing MUST be initialized before any Tauri plugin.
-    // tauri-plugin-log will detect an existing global subscriber and skip its own init.
+fn setup_tracing() {
+    let data_dir = if let Ok(dir) = std::env::var("XDG_DATA_HOME") {
+        PathBuf::from(dir).join("acmind")
+    } else if let Ok(home) = std::env::var("HOME") {
+        PathBuf::from(home).join(".local/share/acmind")
+    } else {
+        PathBuf::from("acmind-data")
+    };
+    std::fs::create_dir_all(&data_dir).ok();
+
+    let log_path = data_dir.join("acmind.log");
+    let file_appender = tracing_appender::rolling::never(&data_dir, "acmind.log");
+    let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
+    // Leak the guard so the file writer lives for the entire app lifetime
+    Box::leak(Box::new(_guard));
+
+    let env_filter = EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| EnvFilter::new("info,acmind=debug,reqwest=warn"));
+
     tracing_subscriber::registry()
-        .with(
-            EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| EnvFilter::new("info,acmind=debug,reqwest=warn")),
-        )
+        .with(env_filter)
         .with(fmt::layer().with_writer(std::io::stderr).pretty())
-        .with(
-            fmt::layer()
-                .with_writer(std::io::stderr) // file layer added later in setup
-                .with_ansi(false),
-        )
+        .with(fmt::layer().with_writer(non_blocking).with_ansi(false))
         .try_init()
         .ok();
+
+    tracing::info!("Log file: {}", log_path.display());
+}
+
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
+pub fn run() {
+    setup_tracing();
 
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
@@ -36,15 +51,12 @@ pub fn run() {
             let app_data_dir = get_app_data_dir(app);
             tracing::info!("ACMind starting, data dir: {:?}", app_data_dir);
 
-            // Initialize the database
             let pool = tauri::async_runtime::block_on(init_db(&app_data_dir))
                 .expect("Failed to initialize database");
-
             tracing::info!("Database initialized");
 
             app.manage(pool);
 
-            // Initialize storage
             let storage = Storage::new(app_data_dir);
             app.manage(storage);
 
