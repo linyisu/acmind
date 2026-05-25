@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Plus, Trash2, Code, FileText, Brain } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Code, FileText, Brain, Sparkles, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -135,6 +135,26 @@ export function ProblemDetailPage() {
 		note_type: "self",
 		content: "",
 		source_url: "",
+	});
+
+	const [analyzing, setAnalyzing] = useState(false);
+	const [analysisError, setAnalysisError] = useState("");
+
+	const analyzeMutation = useMutation({
+		mutationFn: () => api("analyze_problem", { problemId: id }),
+		onMutate: () => {
+			setAnalyzing(true);
+			setAnalysisError("");
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["errors", id] });
+			queryClient.invalidateQueries({ queryKey: ["notes", id] });
+			setAnalyzing(false);
+		},
+		onError: (err) => {
+			setAnalysisError(err instanceof Error ? err.message : "Analysis failed");
+			setAnalyzing(false);
+		},
 	});
 
 	const createNote = useMutation({
@@ -450,18 +470,42 @@ export function ProblemDetailPage() {
 						</p>
 					)}
 
-					{/* WA → AC comparison hint */}
+					{/* WA → AC comparison -> AI Analysis */}
 					{submissions && submissions.length >= 2 && (
 						<Card className="border-dashed">
 							<CardHeader>
-								<CardTitle className="text-sm">WA → AC Comparison</CardTitle>
+								<CardTitle className="text-sm flex items-center gap-2">
+									<Sparkles className="h-4 w-4" />
+									AI Analysis
+								</CardTitle>
 							</CardHeader>
-							<CardContent className="text-sm text-muted-foreground">
-								<p>
-									You have both WA and AC submissions! Use the AI analysis
-									feature (coming soon) to compare them and identify your
-									mistakes.
+							<CardContent className="space-y-3">
+								<p className="text-sm text-muted-foreground">
+									You have both WA and AC submissions! Let AI analyze your
+									mistakes and suggest improvements.
 								</p>
+								{analysisError && (
+									<div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+										{analysisError}
+									</div>
+								)}
+								<Button
+									size="sm"
+									onClick={() => analyzeMutation.mutate()}
+									disabled={analyzing}
+								>
+									{analyzing ? (
+										<>
+											<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+											Analyzing...
+										</>
+									) : (
+										<>
+											<Sparkles className="mr-2 h-4 w-4" />
+											Analyze Problem
+										</>
+									)}
+								</Button>
 							</CardContent>
 						</Card>
 					)}

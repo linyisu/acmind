@@ -305,6 +305,16 @@ fn build_report_content(
     content
 }
 
+// -- AI Analysis --
+
+#[tauri::command(rename_all = "camelCase")]
+pub async fn analyze_problem(
+    pool: State<'_, SqlitePool>,
+    problem_id: String,
+) -> Result<crate::ai::AnalysisResult, AppError> {
+    crate::ai::analyze_problem(&pool, &problem_id).await
+}
+
 // -- Dashboard --
 
 #[tauri::command(rename_all = "camelCase")]

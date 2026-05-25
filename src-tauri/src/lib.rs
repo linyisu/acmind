@@ -63,6 +63,8 @@ pub fn run() {
             // Reports
             commands::list_reports,
             commands::generate_report,
+            // AI Analysis
+            commands::analyze_problem,
             // Dashboard
             commands::get_dashboard_stats,
             commands::get_error_type_stats,
