@@ -14,6 +14,9 @@ pub struct AnalysisResult {
     pub suggestions: Vec<String>,
 }
 
+const AI_SYSTEM_PROMPT: &str =
+    "你是一名专业的算法竞赛教练。请始终只返回有效 JSON，不要输出额外解释。";
+
 /// Analyze a problem's WA and AC codes against the statement and solutions.
 #[instrument(skip(pool), fields(problem_id = %problem_id))]
 pub async fn analyze_problem(
@@ -44,7 +47,7 @@ pub async fn analyze_problem(
     if api_key.is_empty() {
         warn!("AI analysis blocked: no API key configured");
         return Err(AppError::InvalidInput(
-            "Please configure AI API key in Settings first. Go to Settings → AI Provider and enter your API key.".into(),
+            "请先在设置 → AI 提供商中填写 API Key。".into(),
         ));
     }
 
@@ -83,38 +86,38 @@ fn build_analysis_prompt(
     notes: &[crate::db::models::SolutionNote],
 ) -> String {
     let mut prompt = format!(
-        "You are an ACM/ICPC training coach. Analyze the following problem and submissions.\n\n\
-        Problem: {}\n\n\
-        Submissions:\n",
+        "你是一名 ACM/ICPC 训练教练。请分析下面的题目、提交记录和笔记。\n\n\
+        题目：{}\n\n\
+        提交记录：\n",
         title
     );
 
     for sub in submissions {
         prompt.push_str(&format!(
-            "- Status: {}, Language: {}, Note: {}\n",
+            "- 状态：{}，语言：{}，备注：{}\n",
             sub.status,
             sub.language,
-            sub.note.as_deref().unwrap_or("none")
+            sub.note.as_deref().unwrap_or("无")
         ));
     }
 
     if !notes.is_empty() {
-        prompt.push_str("\nNotes:\n");
+        prompt.push_str("\n笔记：\n");
         for note in notes {
             prompt.push_str(&format!("- [{}] {}\n", note.note_type, note.content));
         }
     }
 
     prompt.push_str(
-        "\nBased on the above, provide a JSON analysis with these fields:\n\
+        "\n请基于以上信息，返回一个 JSON 分析对象，字段必须严格如下（字段名保持英文，不要翻译）：\n\
         {\n\
-          \"knowledge_points\": [\"list of algorithm/data-structure tags involved\"],\n\
-          \"error_type\": \"one of: logic, boundary, overflow, index, initialization, complexity, template, misread, other\",\n\
-          \"root_cause\": \"detailed root cause of the failure\",\n\
-          \"fix_summary\": \"concise fix explanation\",\n\
-          \"suggestions\": [\"3-5 specific improvement suggestions\"]\n\
+          \"knowledge_points\": [\"涉及的算法或数据结构标签，例如 dp、graph、greedy\"],\n\
+          \"error_type\": \"只能是以下之一：logic、boundary、overflow、index、initialization、complexity、template、misread、other\",\n\
+          \"root_cause\": \"用中文详细说明错误根因\",\n\
+          \"fix_summary\": \"用中文简明说明修复方式\",\n\
+          \"suggestions\": [\"3-5 条中文、具体、可执行的改进建议\"]\n\
         }\n\n\
-        Return ONLY valid JSON, no other text.",
+        只返回有效 JSON，不要返回 Markdown、代码块或任何额外文本。",
     );
 
     prompt
@@ -205,7 +208,7 @@ async fn call_openai_compatible(
     let body = serde_json::json!({
         "model": model,
         "messages": [
-            {"role": "system", "content": "You are an expert algorithm coach. Always respond in valid JSON."},
+            {"role": "system", "content": AI_SYSTEM_PROMPT},
             {"role": "user", "content": prompt}
         ],
         "temperature": 0.3,
@@ -220,18 +223,18 @@ async fn call_openai_compatible(
         .json(&body)
         .send()
         .await
-        .map_err(|e| AppError::AiError(format!("API request failed: {}", e)))?;
+        .map_err(|e| AppError::AiError(format!("API 请求失败：{}", e)))?;
 
     if !resp.status().is_success() {
         let status = resp.status();
         let text = resp.text().await.unwrap_or_default();
-        return Err(AppError::AiError(format!("API error {}: {}", status, text)));
+        return Err(AppError::AiError(format!("API 错误 {}：{}", status, text)));
     }
 
     let json: serde_json::Value = resp
         .json()
         .await
-        .map_err(|e| AppError::AiError(format!("Failed to parse API response: {}", e)))?;
+        .map_err(|e| AppError::AiError(format!("解析 API 响应失败：{}", e)))?;
 
     let content = json["choices"][0]["message"]["content"]
         .as_str()
@@ -250,7 +253,7 @@ async fn call_anthropic(api_key: &str, model: &str, prompt: &str) -> Result<Stri
         "messages": [
             {"role": "user", "content": prompt}
         ],
-        "system": "You are an expert algorithm coach. Always respond in valid JSON."
+        "system": AI_SYSTEM_PROMPT
     });
 
     let client = reqwest::Client::new();
@@ -262,13 +265,13 @@ async fn call_anthropic(api_key: &str, model: &str, prompt: &str) -> Result<Stri
         .json(&body)
         .send()
         .await
-        .map_err(|e| AppError::AiError(format!("Anthropic API request failed: {}", e)))?;
+        .map_err(|e| AppError::AiError(format!("Anthropic API 请求失败：{}", e)))?;
 
     if !resp.status().is_success() {
         let status = resp.status();
         let text = resp.text().await.unwrap_or_default();
         return Err(AppError::AiError(format!(
-            "Anthropic API error {}: {}",
+            "Anthropic API 错误 {}：{}",
             status, text
         )));
     }
@@ -276,7 +279,7 @@ async fn call_anthropic(api_key: &str, model: &str, prompt: &str) -> Result<Stri
     let json: serde_json::Value = resp
         .json()
         .await
-        .map_err(|e| AppError::AiError(format!("Failed to parse Anthropic response: {}", e)))?;
+        .map_err(|e| AppError::AiError(format!("解析 Anthropic 响应失败：{}", e)))?;
 
     let content = json["content"][0]["text"]
         .as_str()
@@ -311,13 +314,13 @@ async fn call_gemini(api_key: &str, model: &str, prompt: &str) -> Result<String,
         .json(&body)
         .send()
         .await
-        .map_err(|e| AppError::AiError(format!("Gemini API request failed: {}", e)))?;
+        .map_err(|e| AppError::AiError(format!("Gemini API 请求失败：{}", e)))?;
 
     if !resp.status().is_success() {
         let status = resp.status();
         let text = resp.text().await.unwrap_or_default();
         return Err(AppError::AiError(format!(
-            "Gemini API error {}: {}",
+            "Gemini API 错误 {}：{}",
             status, text
         )));
     }
@@ -325,7 +328,7 @@ async fn call_gemini(api_key: &str, model: &str, prompt: &str) -> Result<String,
     let json: serde_json::Value = resp
         .json()
         .await
-        .map_err(|e| AppError::AiError(format!("Failed to parse Gemini response: {}", e)))?;
+        .map_err(|e| AppError::AiError(format!("解析 Gemini 响应失败：{}", e)))?;
 
     let content = json["candidates"][0]["content"]["parts"][0]["text"]
         .as_str()
@@ -360,7 +363,7 @@ pub async fn analyze_problem_streaming(
 
     if api_key.is_empty() {
         return Err(AppError::InvalidInput(
-            "Please configure AI API key in Settings first.".into(),
+            "请先在设置中填写 AI API Key。".into(),
         ));
     }
 
@@ -372,11 +375,11 @@ pub async fn analyze_problem_streaming(
 
     let response = match provider.as_str() {
         "anthropic" => {
-            on_chunk("(streaming not supported for Anthropic, please wait...)\n");
+            on_chunk("（Anthropic 暂不支持流式输出，请稍等...）\n");
             call_anthropic(&api_key, &model, &prompt).await?
         }
         "google" => {
-            on_chunk("(streaming not supported for Gemini, please wait...)\n");
+            on_chunk("（Gemini 暂不支持流式输出，请稍等...）\n");
             call_gemini(&api_key, &model, &prompt).await?
         }
         _ => {
@@ -406,7 +409,7 @@ async fn call_openai_compatible_streaming(
     let body = serde_json::json!({
         "model": model,
         "messages": [
-            {"role": "system", "content": "You are an expert algorithm coach. Always respond in valid JSON."},
+            {"role": "system", "content": AI_SYSTEM_PROMPT},
             {"role": "user", "content": prompt}
         ],
         "temperature": 0.3,
@@ -422,12 +425,12 @@ async fn call_openai_compatible_streaming(
         .json(&body)
         .send()
         .await
-        .map_err(|e| AppError::AiError(format!("Streaming API request failed: {}", e)))?;
+        .map_err(|e| AppError::AiError(format!("流式 API 请求失败：{}", e)))?;
 
     if !resp.status().is_success() {
         let status = resp.status();
         let text = resp.text().await.unwrap_or_default();
-        return Err(AppError::AiError(format!("API error {}: {}", status, text)));
+        return Err(AppError::AiError(format!("API 错误 {}：{}", status, text)));
     }
 
     let mut full_text = String::new();
@@ -436,7 +439,7 @@ async fn call_openai_compatible_streaming(
 
     while let Some(chunk_result) = stream.next().await {
         let chunk =
-            chunk_result.map_err(|e| AppError::AiError(format!("Stream read error: {}", e)))?;
+            chunk_result.map_err(|e| AppError::AiError(format!("读取流式响应失败：{}", e)))?;
         pending.push_str(&String::from_utf8_lossy(&chunk));
 
         while let Some(newline_index) = pending.find('\n') {
@@ -451,7 +454,7 @@ async fn call_openai_compatible_streaming(
     }
 
     if full_text.is_empty() {
-        return Err(AppError::AiError("AI returned empty response".into()));
+        return Err(AppError::AiError("AI 返回了空响应".into()));
     }
 
     Ok(full_text)
