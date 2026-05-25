@@ -12,6 +12,11 @@ impl Storage {
         Self { base_path }
     }
 
+    /// Get the base data directory path.
+    pub fn base_dir(&self) -> &PathBuf {
+        &self.base_path
+    }
+
     /// Get the problem directory path.
     fn problem_dir(&self, problem_id: &str) -> PathBuf {
         self.base_path.join("problems").join(&problem_id[..8]) // Use first 8 chars of UUID as subdir

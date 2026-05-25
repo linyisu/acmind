@@ -395,3 +395,8 @@ pub async fn get_all_settings(
 ) -> Result<Vec<repo::AppSetting>, AppError> {
     Ok(repo::get_all_settings(&pool).await?)
 }
+
+#[tauri::command(rename_all = "camelCase")]
+pub async fn get_log_path(storage: State<'_, Storage>) -> Result<String, AppError> {
+    Ok(storage.base_dir().join("acmind.log").to_string_lossy().to_string())
+}

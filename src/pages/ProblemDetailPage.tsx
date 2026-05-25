@@ -495,8 +495,11 @@ export function ProblemDetailPage() {
 									mistakes and suggest improvements.
 								</p>
 								{analysisError && (
-									<div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-										{analysisError}
+									<div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive space-y-2">
+										<p>{analysisError}</p>
+										<p className="text-xs text-muted-foreground">
+											Check ~/.local/share/acmind/acmind.log for details.
+										</p>
 									</div>
 								)}
 								<Button
