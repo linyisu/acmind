@@ -23,6 +23,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { Problem } from "@/lib/types";
 
 async function fetchProblems(): Promise<Problem[]> {
@@ -66,6 +67,7 @@ function getDifficultyBadge(difficulty?: number) {
 
 export function ProblemsPage() {
 	const queryClient = useQueryClient();
+	const { t } = useTranslation();
 	const { data: problems, isLoading } = useQuery({
 		queryKey: ["problems"],
 		queryFn: fetchProblems,
@@ -137,9 +139,9 @@ export function ProblemsPage() {
 		<div className="space-y-6">
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-2xl font-bold">Problems</h1>
+					<h1 className="text-2xl font-bold">{t("problems.title")}</h1>
 					<p className="text-muted-foreground">
-						{problems?.length ?? 0} problems recorded
+						{t("problems.recorded", { count: problems?.length ?? 0 })}
 					</p>
 				</div>
 
@@ -147,26 +149,26 @@ export function ProblemsPage() {
 					<DialogTrigger asChild>
 						<Button>
 							<Plus className="mr-2 h-4 w-4" />
-							Add Problem
+							添加题目
 						</Button>
 					</DialogTrigger>
 					<DialogContent className="sm:max-w-lg">
 						<DialogHeader>
-							<DialogTitle>Add New Problem</DialogTitle>
+							<DialogTitle>{t("problems.addNew")}</DialogTitle>
 						</DialogHeader>
 						<div className="grid gap-4 py-4">
 							<div className="grid gap-2">
-								<Label htmlFor="title">Title *</Label>
+								<Label htmlFor="title">{t("problems.problemTitle")}</Label>
 								<Input
 									id="title"
 									value={form.title}
 									onChange={(e) => setForm({ ...form, title: e.target.value })}
-									placeholder="Problem title"
+									placeholder={t("problems.placeholderTitle")}
 								/>
 							</div>
 							<div className="grid grid-cols-2 gap-4">
 								<div className="grid gap-2">
-									<Label htmlFor="source">Source</Label>
+									<Label htmlFor="source">{t("problems.source")}</Label>
 									<Input
 										id="source"
 										value={form.source}
@@ -176,7 +178,7 @@ export function ProblemsPage() {
 									/>
 								</div>
 								<div className="grid gap-2">
-									<Label htmlFor="source_id">Problem ID</Label>
+									<Label htmlFor="source_id">{t("problems.problemId")}</Label>
 									<Input
 										id="source_id"
 										value={form.source_problem_id}
@@ -198,7 +200,7 @@ export function ProblemsPage() {
 							</div>
 							<div className="grid grid-cols-2 gap-4">
 								<div className="grid gap-2">
-									<Label htmlFor="difficulty">Difficulty (rating)</Label>
+									<Label htmlFor="difficulty">{t("problems.difficultyRating")}</Label>
 									<Input
 										id="difficulty"
 										type="number"
@@ -210,7 +212,7 @@ export function ProblemsPage() {
 									/>
 								</div>
 								<div className="grid gap-2">
-									<Label htmlFor="tags">Tags (comma-separated)</Label>
+									<Label htmlFor="tags">{t("problems.tagsComma")}</Label>
 									<Input
 										id="tags"
 										value={form.tags}
@@ -221,7 +223,7 @@ export function ProblemsPage() {
 							</div>
 							<div className="grid gap-2">
 								<Label htmlFor="statement">
-									Statement (Markdown, optional)
+									{t("problems.statement")}
 								</Label>
 								<Textarea
 									id="statement"
@@ -230,19 +232,19 @@ export function ProblemsPage() {
 									onChange={(e) =>
 										setForm({ ...form, statement: e.target.value })
 									}
-									placeholder="Paste the problem statement here..."
+									placeholder={t("problems.placeholderStatement")}
 								/>
 							</div>
 						</div>
 						<div className="flex justify-end gap-2">
 							<Button variant="outline" onClick={() => setDialogOpen(false)}>
-								Cancel
+								{t("common.cancel")}
 							</Button>
 							<Button
 								onClick={() => createMutation.mutate()}
 								disabled={!form.title || createMutation.isPending}
 							>
-								{createMutation.isPending ? "Adding..." : "Add Problem"}
+								{createMutation.isPending ? t("problems.adding") : t("problems.add")}
 							</Button>
 						</div>
 					</DialogContent>
@@ -251,7 +253,7 @@ export function ProblemsPage() {
 
 			{/* Search */}
 			<Input
-				placeholder="Search by title, source, or tags..."
+				placeholder={t("problems.search")}
 				value={search}
 				onChange={(e) => setSearch(e.target.value)}
 				className="max-w-sm"
@@ -268,11 +270,11 @@ export function ProblemsPage() {
 				<Table>
 					<TableHeader>
 						<TableRow>
-							<TableHead>Title</TableHead>
-							<TableHead>Source</TableHead>
-							<TableHead>Difficulty</TableHead>
-							<TableHead>Tags</TableHead>
-							<TableHead className="w-20">Actions</TableHead>
+							<TableHead>{t("problems.problemTitle")}</TableHead>
+							<TableHead>{t("problems.source")}</TableHead>
+							<TableHead>{t("problems.difficulty")}</TableHead>
+							<TableHead>{t("problems.tags")}</TableHead>
+							<TableHead className="w-20">{t("problems.actions")}</TableHead>
 						</TableRow>
 					</TableHeader>
 					<TableBody>
@@ -313,7 +315,7 @@ export function ProblemsPage() {
 										)}
 										<button
 											onClick={() => {
-												if (confirm("Delete this problem?")) {
+												if (confirm(t("problems.deleteConfirm"))) {
 													deleteMutation.mutate(problem.id);
 												}
 											}}
@@ -328,7 +330,7 @@ export function ProblemsPage() {
 					</TableBody>
 				</Table>
 			) : (
-				<p className="text-muted-foreground">No problems found.</p>
+				<p className="text-muted-foreground">{t("problems.empty")}</p>
 			)}
 		</div>
 	);

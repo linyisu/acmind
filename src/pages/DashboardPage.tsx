@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTranslation } from "react-i18next";
 import {
 	BookOpen,
 	CheckCircle2,
@@ -41,6 +42,7 @@ async function fetchDashboardStats(): Promise<DashboardStats> {
 }
 
 export function DashboardPage() {
+	const { t } = useTranslation();
 	const { data, isLoading } = useQuery({
 		queryKey: ["dashboard-stats"],
 		queryFn: fetchDashboardStats,
@@ -53,7 +55,7 @@ export function DashboardPage() {
 
 	const statCards = [
 		{
-			title: "Total Problems",
+			title: t("dashboard.totalProblems"),
 			value: data?.total_problems ?? "—",
 			icon: BookOpen,
 			color: "text-blue-500",
@@ -83,7 +85,7 @@ export function DashboardPage() {
 			color: "text-destructive",
 		},
 		{
-			title: "AC Rate",
+			title: t("dashboard.acRate"),
 			value: `${acRate}%`,
 			icon: CheckCircle2,
 			color: "text-green-500",
@@ -93,8 +95,8 @@ export function DashboardPage() {
 	return (
 		<div className="space-y-6">
 			<div>
-				<h1 className="text-2xl font-bold">Dashboard</h1>
-				<p className="text-muted-foreground">Your ACM training overview</p>
+				<h1 className="text-2xl font-bold">{t("dashboard.title")}</h1>
+				<p className="text-muted-foreground">{t("dashboard.subtitle")}</p>
 			</div>
 
 			{/* Stats cards */}
@@ -122,21 +124,15 @@ export function DashboardPage() {
 			{(!data || data.total_problems === 0) && (
 				<Card className="border-dashed">
 					<CardHeader>
-						<CardTitle>Getting Started</CardTitle>
+						<CardTitle>{t("dashboard.gettingStarted")}</CardTitle>
 					</CardHeader>
 					<CardContent className="space-y-3">
-						<p className="text-muted-foreground">
-							Your ACM training database is empty. Start by adding your first
-							problem!
-						</p>
+						<p className="text-muted-foreground">{t("dashboard.empty")}</p>
 						<div className="flex flex-col gap-2 text-sm text-muted-foreground">
-							<p>
-								1. Go to <strong>Problems</strong> and click{" "}
-								<strong>Add Problem</strong>
-							</p>
-							<p>2. Record your submissions (WA and AC codes)</p>
-							<p>3. Add solution notes and AI analysis</p>
-							<p>4. View your training reports here</p>
+							<p>1. {t("dashboard.step1")}</p>
+							<p>2. {t("dashboard.step2")}</p>
+							<p>3. {t("dashboard.step3")}</p>
+							<p>4. {t("dashboard.step4")}</p>
 						</div>
 					</CardContent>
 				</Card>

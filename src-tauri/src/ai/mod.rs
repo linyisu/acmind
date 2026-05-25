@@ -136,22 +136,56 @@ pub fn parse_analysis_response(response: &str) -> Result<AnalysisResult, AppErro
         response
     };
 
-    let result: AnalysisResult = serde_json::from_str(json_str.trim()).map_err(|e| {
-        error!("Failed to parse AI JSON response: {}", e);
-        error!(
-            "Raw response (first 500 chars): {}",
-            &response[..response.len().min(500)]
-        );
-        AppError::AiError(format!("Failed to parse AI response: {}", e))
+    if let Ok(result) = serde_json::from_str(json_str.trim()) {
+        info!("AI analysis completed successfully");
+        return Ok(result);
+    }
+
+    let Some(repaired) = repair_truncated_json(json_str.trim()) else {
+        return serde_json::from_str(json_str.trim()).map_err(|e| {
+            error!("Failed to parse AI JSON response: {}", e);
+            error!(
+                "Raw response (first 500 chars): {}",
+                &response[..response.len().min(500)]
+            );
+            AppError::AiError(format!("AI 返回内容不是有效 JSON：{}", e))
+        });
+    };
+
+    let result: AnalysisResult = serde_json::from_str(&repaired).map_err(|e| {
+        error!("Failed to parse repaired AI JSON response: {}", e);
+        error!("Repaired response: {}", repaired);
+        AppError::AiError(format!("AI 返回内容不完整，且自动修复失败：{}", e))
     })?;
 
-    info!(
-        error_type = %result.error_type,
-        root_cause = %result.root_cause,
-        "AI analysis completed successfully"
-    );
-
+    warn!("AI JSON response was truncated and repaired");
     Ok(result)
+}
+
+fn repair_truncated_json(input: &str) -> Option<String> {
+    if !input.starts_with('{') {
+        return None;
+    }
+
+    let mut output = input.trim().to_string();
+    let quote_count = output.chars().filter(|c| *c == '"').count();
+    if quote_count % 2 == 1 {
+        output.push('"');
+    }
+
+    let open_arrays = output.chars().filter(|c| *c == '[').count();
+    let close_arrays = output.chars().filter(|c| *c == ']').count();
+    for _ in close_arrays..open_arrays {
+        output.push(']');
+    }
+
+    let open_objects = output.chars().filter(|c| *c == '{').count();
+    let close_objects = output.chars().filter(|c| *c == '}').count();
+    for _ in close_objects..open_objects {
+        output.push('}');
+    }
+
+    Some(output)
 }
 
 // -- OpenAI-compatible API (OpenAI, DeepSeek, custom endpoints) --
@@ -444,7 +478,7 @@ fn append_openai_stream_line(line: &str, full_text: &mut String, on_chunk: &impl
 
 #[cfg(test)]
 mod tests {
-    use super::append_openai_stream_line;
+    use super::{append_openai_stream_line, parse_analysis_response};
 
     #[test]
     fn appends_openai_stream_content_delta() {
@@ -471,5 +505,16 @@ mod tests {
 
         assert!(full_text.is_empty());
         assert!(chunks.is_empty());
+    }
+
+    #[test]
+    fn repairs_truncated_analysis_json() {
+        let result = parse_analysis_response(
+            r#"{"knowledge_points":["dp"],"error_type":"logic","root_cause":"状态转移漏了边界","fix_summary":"补上边界","suggestions":["补充边界用例""#,
+        )
+        .unwrap();
+
+        assert_eq!(result.error_type, "logic");
+        assert_eq!(result.suggestions, vec!["补充边界用例"]);
     }
 }

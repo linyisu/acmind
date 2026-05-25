@@ -9,19 +9,21 @@ import {
 	ChevronRight,
 } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 
 const navItems = [
-	{ to: "/", icon: LayoutDashboard, label: "Dashboard" },
-	{ to: "/problems", icon: BookOpen, label: "Problems" },
-	{ to: "/reports", icon: FileText, label: "Reports" },
-	{ to: "/knowledge", icon: Brain, label: "Knowledge" },
-	{ to: "/settings", icon: Settings, label: "Settings" },
+	{ to: "/", icon: LayoutDashboard, labelKey: "nav.dashboard" },
+	{ to: "/problems", icon: BookOpen, labelKey: "nav.problems" },
+	{ to: "/reports", icon: FileText, labelKey: "nav.reports" },
+	{ to: "/knowledge", icon: Brain, labelKey: "nav.knowledge" },
+	{ to: "/settings", icon: Settings, labelKey: "nav.settings" },
 ];
 
 export function AppSidebar() {
 	const [collapsed, setCollapsed] = useState(false);
 	const location = useLocation();
+	const { t } = useTranslation();
 
 	return (
 		<aside
@@ -33,12 +35,14 @@ export function AppSidebar() {
 			{/* App title */}
 			<div className="flex h-14 items-center justify-between border-b border-sidebar-border px-4">
 				{!collapsed && (
-					<span className="text-lg font-bold tracking-tight">ACM Insight</span>
+					<span className="text-lg font-bold tracking-tight">{t("app.name")}</span>
 				)}
 				<button
 					onClick={() => setCollapsed(!collapsed)}
 					className="rounded-md p-1.5 hover:bg-sidebar-accent"
-					title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+					title={
+						collapsed ? t("nav.expandSidebar") : t("nav.collapseSidebar")
+					}
 				>
 					{collapsed ? (
 						<ChevronRight className="h-4 w-4" />
@@ -67,7 +71,7 @@ export function AppSidebar() {
 							)}
 						>
 							<item.icon className="h-5 w-5 shrink-0" />
-							{!collapsed && <span>{item.label}</span>}
+							{!collapsed && <span>{t(item.labelKey)}</span>}
 						</NavLink>
 					);
 				})}
