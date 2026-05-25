@@ -7,17 +7,17 @@ use sqlx::SqlitePool;
 
 // -- Problems --
 
-#[tauri::command]
+#[tauri::command(rename_all = "camelCase")]
 pub async fn list_problems(pool: State<'_, SqlitePool>) -> Result<Vec<Problem>, AppError> {
     Ok(repo::list_problems(&pool).await?)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "camelCase")]
 pub async fn get_problem(pool: State<'_, SqlitePool>, id: String) -> Result<Problem, AppError> {
     Ok(repo::get_problem(&pool, &id).await?)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "camelCase")]
 pub async fn create_problem(
     pool: State<'_, SqlitePool>,
     storage: State<'_, Storage>,
@@ -61,7 +61,7 @@ pub async fn create_problem(
     Ok(problem)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "camelCase")]
 pub async fn update_problem(
     pool: State<'_, SqlitePool>,
     storage: State<'_, Storage>,
@@ -77,7 +77,7 @@ pub async fn update_problem(
     Ok(repo::update_problem(&pool, &id, &input, statement_path.as_deref()).await?)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "camelCase")]
 pub async fn delete_problem(
     pool: State<'_, SqlitePool>,
     storage: State<'_, Storage>,
@@ -90,7 +90,7 @@ pub async fn delete_problem(
 
 // -- Submissions --
 
-#[tauri::command]
+#[tauri::command(rename_all = "camelCase")]
 pub async fn list_submissions_by_problem(
     pool: State<'_, SqlitePool>,
     problem_id: String,
@@ -98,7 +98,7 @@ pub async fn list_submissions_by_problem(
     Ok(repo::list_submissions_by_problem(&pool, &problem_id).await?)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "camelCase")]
 pub async fn get_submission(
     pool: State<'_, SqlitePool>,
     storage: State<'_, Storage>,
@@ -115,7 +115,7 @@ pub async fn get_submission(
     Ok(value)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "camelCase")]
 pub async fn create_submission(
     pool: State<'_, SqlitePool>,
     storage: State<'_, Storage>,
@@ -156,7 +156,7 @@ pub async fn create_submission(
     Ok(repo::get_submission(&pool, &sub.id).await?)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "camelCase")]
 pub async fn delete_submission(
     pool: State<'_, SqlitePool>,
     storage: State<'_, Storage>,
@@ -170,7 +170,7 @@ pub async fn delete_submission(
 
 // -- Notes --
 
-#[tauri::command]
+#[tauri::command(rename_all = "camelCase")]
 pub async fn list_notes_by_problem(
     pool: State<'_, SqlitePool>,
     problem_id: String,
@@ -178,7 +178,7 @@ pub async fn list_notes_by_problem(
     Ok(repo::list_notes_by_problem(&pool, &problem_id).await?)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "camelCase")]
 pub async fn create_note(
     pool: State<'_, SqlitePool>,
     input: CreateNoteInput,
@@ -186,7 +186,7 @@ pub async fn create_note(
     Ok(repo::create_note(&pool, &input).await?)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "camelCase")]
 pub async fn update_note(
     pool: State<'_, SqlitePool>,
     id: String,
@@ -195,7 +195,7 @@ pub async fn update_note(
     Ok(repo::update_note(&pool, &id, &content).await?)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "camelCase")]
 pub async fn delete_note(
     pool: State<'_, SqlitePool>,
     id: String,
@@ -206,7 +206,7 @@ pub async fn delete_note(
 
 // -- Error Analyses --
 
-#[tauri::command]
+#[tauri::command(rename_all = "camelCase")]
 pub async fn list_error_analyses_by_problem(
     pool: State<'_, SqlitePool>,
     problem_id: String,
@@ -214,7 +214,7 @@ pub async fn list_error_analyses_by_problem(
     Ok(repo::list_error_analyses_by_problem(&pool, &problem_id).await?)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "camelCase")]
 pub async fn create_error_analysis(
     pool: State<'_, SqlitePool>,
     input: CreateErrorInput,
@@ -224,14 +224,14 @@ pub async fn create_error_analysis(
 
 // -- Knowledge Points --
 
-#[tauri::command]
+#[tauri::command(rename_all = "camelCase")]
 pub async fn list_knowledge_points(
     pool: State<'_, SqlitePool>,
 ) -> Result<Vec<KnowledgePoint>, AppError> {
     Ok(repo::list_knowledge_points(&pool).await?)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "camelCase")]
 pub async fn create_knowledge_point(
     pool: State<'_, SqlitePool>,
     input: CreateKnowledgeInput,
@@ -241,14 +241,14 @@ pub async fn create_knowledge_point(
 
 // -- Reports --
 
-#[tauri::command]
+#[tauri::command(rename_all = "camelCase")]
 pub async fn list_reports(
     pool: State<'_, SqlitePool>,
 ) -> Result<Vec<Report>, AppError> {
     Ok(repo::list_reports(&pool).await?)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "camelCase")]
 pub async fn generate_report(
     pool: State<'_, SqlitePool>,
     input: GenerateReportInput,
@@ -307,16 +307,42 @@ fn build_report_content(
 
 // -- Dashboard --
 
-#[tauri::command]
+#[tauri::command(rename_all = "camelCase")]
 pub async fn get_dashboard_stats(
     pool: State<'_, SqlitePool>,
 ) -> Result<repo::DashboardStats, AppError> {
     Ok(repo::get_dashboard_stats(&pool).await?)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "camelCase")]
 pub async fn get_error_type_stats(
     pool: State<'_, SqlitePool>,
 ) -> Result<Vec<repo::ErrorTypeStat>, AppError> {
     Ok(repo::get_error_type_stats(&pool).await?)
+}
+
+// -- Settings --
+
+#[tauri::command(rename_all = "camelCase")]
+pub async fn get_setting(
+    pool: State<'_, SqlitePool>,
+    key: String,
+) -> Result<Option<String>, AppError> {
+    Ok(repo::get_setting(&pool, &key).await?)
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub async fn set_setting(
+    pool: State<'_, SqlitePool>,
+    key: String,
+    value: String,
+) -> Result<(), AppError> {
+    Ok(repo::set_setting(&pool, &key, &value).await?)
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub async fn get_all_settings(
+    pool: State<'_, SqlitePool>,
+) -> Result<Vec<repo::AppSetting>, AppError> {
+    Ok(repo::get_all_settings(&pool).await?)
 }

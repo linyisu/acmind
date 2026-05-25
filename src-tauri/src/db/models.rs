@@ -3,6 +3,32 @@ use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
 
+/// Custom serde module for JSON array fields stored as strings in DB.
+/// When serializing (→ frontend), outputs a Vec<String>.
+/// When deserializing (← frontend/DB), expects either a JSON string or a JSON array.
+mod json_array {
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+    pub fn serialize<S: Serializer>(json_str: &str, s: S) -> Result<S::Ok, S::Error> {
+        let arr: Vec<String> = serde_json::from_str(json_str).unwrap_or_default();
+        arr.serialize(s)
+    }
+
+    pub fn deserialize<'de, D: Deserializer<'de>>(d: D) -> Result<String, D::Error> {
+        // Accept both a JSON string (from DB) or a JSON array (from frontend)
+        let value: serde_json::Value = serde_json::Value::deserialize(d)?;
+        match value {
+            serde_json::Value::String(s) => {
+                // Verify it's valid JSON array
+                let _: Vec<String> = serde_json::from_str(&s).unwrap_or_default();
+                Ok(s)
+            }
+            serde_json::Value::Array(arr) => Ok(serde_json::to_string(&arr).unwrap_or_default()),
+            _ => Ok("[]".into()),
+        }
+    }
+}
+
 // -- Problem --
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Problem {
@@ -12,7 +38,8 @@ pub struct Problem {
     pub title: String,
     pub url: Option<String>,
     pub difficulty: Option<i32>,
-    pub tags: String, // JSON array stored as string
+    #[serde(with = "json_array")]
+    pub tags: String, // JSON array stored as string, serialized as Vec<String>
     pub statement_path: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -93,7 +120,8 @@ pub struct ErrorAnalysis {
     pub error_type: String,
     pub root_cause: String,
     pub fix_summary: String,
-    pub related_knowledge: String, // JSON array
+    #[serde(with = "json_array")]
+    pub related_knowledge: String, // JSON array, serialized as Vec<String>
     pub created_at: DateTime<Utc>,
 }
 

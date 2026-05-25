@@ -360,6 +360,40 @@ pub async fn get_error_type_stats(pool: &SqlitePool) -> Result<Vec<ErrorTypeStat
     .await
 }
 
+// -- Settings --
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct AppSetting {
+    pub key: String,
+    pub value: String,
+    pub updated_at: chrono::DateTime<chrono::Utc>,
+}
+
+pub async fn get_setting(pool: &SqlitePool, key: &str) -> Result<Option<String>, sqlx::Error> {
+    let result = sqlx::query_as::<_, (String,)>("SELECT value FROM settings WHERE key = ?1")
+        .bind(key)
+        .fetch_optional(pool)
+        .await?;
+    Ok(result.map(|r| r.0))
+}
+
+pub async fn set_setting(pool: &SqlitePool, key: &str, value: &str) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        "INSERT INTO settings (key, value, updated_at) VALUES (?1, ?2, datetime('now')) ON CONFLICT(key) DO UPDATE SET value = ?2, updated_at = datetime('now')",
+    )
+    .bind(key)
+    .bind(value)
+    .execute(pool)
+    .await?;
+    Ok(())
+}
+
+pub async fn get_all_settings(pool: &SqlitePool) -> Result<Vec<AppSetting>, sqlx::Error> {
+    sqlx::query_as::<_, AppSetting>("SELECT key, value, updated_at FROM settings ORDER BY key")
+        .fetch_all(pool)
+        .await
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -377,6 +411,11 @@ mod tests {
             .execute(&pool)
             .await
             .expect("failed to init test schema");
+
+        sqlx::query(include_str!("../../migrations/002_settings.sql"))
+            .execute(&pool)
+            .await
+            .expect("failed to init settings schema");
 
         pool
     }
@@ -779,5 +818,46 @@ mod tests {
 
         let errors = list_error_analyses_by_problem(&pool, &p.id).await.unwrap();
         assert!(errors.is_empty());
+    }
+
+    // -- Settings --
+
+    #[tokio::test]
+    async fn test_get_setting_default() {
+        let pool = test_pool().await;
+        let val = get_setting(&pool, "ai_provider").await.unwrap();
+        assert_eq!(val, Some("openai".into()));
+    }
+
+    #[tokio::test]
+    async fn test_get_setting_not_found() {
+        let pool = test_pool().await;
+        let val = get_setting(&pool, "nonexistent").await.unwrap();
+        assert_eq!(val, None);
+    }
+
+    #[tokio::test]
+    async fn test_set_and_get_setting() {
+        let pool = test_pool().await;
+        set_setting(&pool, "ai_provider", "anthropic").await.unwrap();
+        let val = get_setting(&pool, "ai_provider").await.unwrap();
+        assert_eq!(val, Some("anthropic".into()));
+    }
+
+    #[tokio::test]
+    async fn test_get_all_settings() {
+        let pool = test_pool().await;
+        let settings = get_all_settings(&pool).await.unwrap();
+        // Should have default settings from 002_settings.sql
+        assert!(settings.iter().any(|s| s.key == "ai_provider"));
+        assert!(settings.iter().any(|s| s.key == "ai_model"));
+    }
+
+    #[tokio::test]
+    async fn test_set_setting_new_key() {
+        let pool = test_pool().await;
+        set_setting(&pool, "custom_key", "custom_value").await.unwrap();
+        let val = get_setting(&pool, "custom_key").await.unwrap();
+        assert_eq!(val, Some("custom_value".into()));
     }
 }

@@ -8,13 +8,13 @@
     },
     {
       "type": "file",
-      "name": "src-tauri/target/debug/build/acmind-4219c492903256c8/out/__global-api-script.js",
-      "file": "src-tauri/target/debug/build/acmind-4219c492903256c8/out/__global-api-script.js"
+      "name": "src-tauri/target/debug/build/acmind-1220e93f34bac1cb/out/__global-api-script.js",
+      "file": "src-tauri/target/debug/build/acmind-1220e93f34bac1cb/out/__global-api-script.js"
     },
     {
       "type": "file",
-      "name": "src-tauri/target/debug/build/acmind-1220e93f34bac1cb/out/__global-api-script.js",
-      "file": "src-tauri/target/debug/build/acmind-1220e93f34bac1cb/out/__global-api-script.js"
+      "name": "src-tauri/target/debug/build/acmind-4219c492903256c8/out/__global-api-script.js",
+      "file": "src-tauri/target/debug/build/acmind-4219c492903256c8/out/__global-api-script.js"
     },
     {
       "type": "file",
@@ -32,12 +32,6 @@
       "name": "@radix-ui/react-popover",
       "file": "package.json",
       "line": 18
-    },
-    {
-      "type": "dependency",
-      "name": "@radix-ui/react-select",
-      "file": "package.json",
-      "line": 19
     },
     {
       "type": "dependency",
@@ -131,12 +125,6 @@
     },
     {
       "type": "export",
-      "name": "CardDescription",
-      "file": "src/components/ui/card.tsx",
-      "line": 83
-    },
-    {
-      "type": "export",
       "name": "TableFooter",
       "file": "src/components/ui/table.tsx",
       "line": 111
@@ -179,33 +167,45 @@
     },
     {
       "type": "export",
+      "name": "SelectGroup",
+      "file": "src/components/ui/select.tsx",
+      "line": 108
+    },
+    {
+      "type": "export",
+      "name": "SelectSeparator",
+      "file": "src/components/ui/select.tsx",
+      "line": 113
+    },
+    {
+      "type": "export",
       "name": "SubmissionStatus",
       "file": "src/lib/types.ts",
-      "line": 12
+      "line": 14
     },
     {
       "type": "export",
       "name": "ErrorCategory",
       "file": "src/lib/types.ts",
-      "line": 36
+      "line": 38
     },
     {
       "type": "export",
       "name": "KnowledgePoint",
       "file": "src/lib/types.ts",
-      "line": 58
+      "line": 60
     },
     {
       "type": "export",
       "name": "ProblemKnowledgeMap",
       "file": "src/lib/types.ts",
-      "line": 65
+      "line": 67
     },
     {
       "type": "export",
       "name": "Report",
       "file": "src/lib/types.ts",
-      "line": 71
+      "line": 73
     }
   ],
   "unusedExports": [
@@ -241,12 +241,6 @@
     },
     {
       "type": "export",
-      "name": "CardDescription",
-      "file": "src/components/ui/card.tsx",
-      "line": 83
-    },
-    {
-      "type": "export",
       "name": "TableFooter",
       "file": "src/components/ui/table.tsx",
       "line": 111
@@ -289,33 +283,45 @@
     },
     {
       "type": "export",
+      "name": "SelectGroup",
+      "file": "src/components/ui/select.tsx",
+      "line": 108
+    },
+    {
+      "type": "export",
+      "name": "SelectSeparator",
+      "file": "src/components/ui/select.tsx",
+      "line": 113
+    },
+    {
+      "type": "export",
       "name": "SubmissionStatus",
       "file": "src/lib/types.ts",
-      "line": 12
+      "line": 14
     },
     {
       "type": "export",
       "name": "ErrorCategory",
       "file": "src/lib/types.ts",
-      "line": 36
+      "line": 38
     },
     {
       "type": "export",
       "name": "KnowledgePoint",
       "file": "src/lib/types.ts",
-      "line": 58
+      "line": 60
     },
     {
       "type": "export",
       "name": "ProblemKnowledgeMap",
       "file": "src/lib/types.ts",
-      "line": 65
+      "line": 67
     },
     {
       "type": "export",
       "name": "Report",
       "file": "src/lib/types.ts",
-      "line": 71
+      "line": 73
     }
   ],
   "unusedFiles": [
@@ -326,13 +332,13 @@
     },
     {
       "type": "file",
-      "name": "src-tauri/target/debug/build/acmind-4219c492903256c8/out/__global-api-script.js",
-      "file": "src-tauri/target/debug/build/acmind-4219c492903256c8/out/__global-api-script.js"
+      "name": "src-tauri/target/debug/build/acmind-1220e93f34bac1cb/out/__global-api-script.js",
+      "file": "src-tauri/target/debug/build/acmind-1220e93f34bac1cb/out/__global-api-script.js"
     },
     {
       "type": "file",
-      "name": "src-tauri/target/debug/build/acmind-1220e93f34bac1cb/out/__global-api-script.js",
-      "file": "src-tauri/target/debug/build/acmind-1220e93f34bac1cb/out/__global-api-script.js"
+      "name": "src-tauri/target/debug/build/acmind-4219c492903256c8/out/__global-api-script.js",
+      "file": "src-tauri/target/debug/build/acmind-4219c492903256c8/out/__global-api-script.js"
     },
     {
       "type": "file",
@@ -352,12 +358,6 @@
       "name": "@radix-ui/react-popover",
       "file": "package.json",
       "line": 18
-    },
-    {
-      "type": "dependency",
-      "name": "@radix-ui/react-select",
-      "file": "package.json",
-      "line": 19
     },
     {
       "type": "dependency",

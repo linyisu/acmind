@@ -1,4 +1,4 @@
 {
-  "signature": "src/components/ui/badge.tsx|src/components/ui/input.tsx|src/components/ui/table.tsx|src/components/ui/tabs.tsx::Unresolved from this turn — src/components/ui/badge.tsx:\n🔴 STOP — 1 issue(s) must be fixed:\n  L41: react-refresh/only-export-components: Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components.",
-  "sessionId": "lens-mpklyaw6-3aeab471"
+  "signature": "src/components/ui/select.tsx|src/pages/SettingsPage.tsx::📐 Cascade errors in 1 neighbor file(s) — fix before finishing turn:\n<diagnostics file=\"src/pages/SettingsPage.tsx\" reason=\"fallback\">\n  line 13, col 8 rule=cascade:2307: Cannot find module '@/components/ui/select' or its corresponding type declarations.\n</diagnostics>\n\nℹ️ Advisory — no action required this turn:\n⚠️ Newly unused exports in modified files — check if callers need updating (Knip):\n  src/components/ui/select.tsx:108 — SelectGroup\n  src/components/ui/select.tsx:113 — SelectSeparator\n",
+  "sessionId": "lens-mpkmhaha-2eb5fb9a"
 }

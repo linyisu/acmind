@@ -66,6 +66,10 @@ pub fn run() {
             // Dashboard
             commands::get_dashboard_stats,
             commands::get_error_type_stats,
+            // Settings
+            commands::get_setting,
+            commands::set_setting,
+            commands::get_all_settings,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

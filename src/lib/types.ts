@@ -6,7 +6,9 @@ export interface Problem {
 	url?: string;
 	difficulty?: number;
 	tags: string[];
+	statement_path?: string;
 	created_at: string;
+	updated_at: string;
 }
 
 export type SubmissionStatus = "AC" | "WA" | "TLE" | "RE" | "MLE" | "CE";
