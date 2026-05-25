@@ -153,6 +153,7 @@ pub struct CreateKnowledgeInput {
 
 // -- Problem-Knowledge Map --
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[allow(dead_code)]
 pub struct ProblemKnowledgeMap {
     pub problem_id: String,
     pub knowledge_point_id: String,

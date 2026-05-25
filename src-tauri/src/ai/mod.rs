@@ -1,5 +1,6 @@
 use crate::db::repo;
 use crate::error::AppError;
+use futures::StreamExt;
 use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
 use tracing::{error, info, instrument, warn};
@@ -100,10 +101,7 @@ fn build_analysis_prompt(
     if !notes.is_empty() {
         prompt.push_str("\nNotes:\n");
         for note in notes {
-            prompt.push_str(&format!(
-                "- [{}] {}\n",
-                note.note_type, note.content
-            ));
+            prompt.push_str(&format!("- [{}] {}\n", note.note_type, note.content));
         }
     }
 
@@ -122,7 +120,7 @@ fn build_analysis_prompt(
     prompt
 }
 
-fn parse_analysis_response(response: &str) -> Result<AnalysisResult, AppError> {
+pub fn parse_analysis_response(response: &str) -> Result<AnalysisResult, AppError> {
     // Extract JSON from the response (handle markdown code blocks)
     let json_str = if let Some(start) = response.find("```json") {
         let inner = &response[start + 7..];
@@ -138,12 +136,14 @@ fn parse_analysis_response(response: &str) -> Result<AnalysisResult, AppError> {
         response
     };
 
-    let result: AnalysisResult = serde_json::from_str(json_str.trim())
-        .map_err(|e| {
-            error!("Failed to parse AI JSON response: {}", e);
-            error!("Raw response (first 500 chars): {}", &response[..response.len().min(500)]);
-            AppError::AiError(format!("Failed to parse AI response: {}", e))
-        })?;
+    let result: AnalysisResult = serde_json::from_str(json_str.trim()).map_err(|e| {
+        error!("Failed to parse AI JSON response: {}", e);
+        error!(
+            "Raw response (first 500 chars): {}",
+            &response[..response.len().min(500)]
+        );
+        AppError::AiError(format!("Failed to parse AI response: {}", e))
+    })?;
 
     info!(
         error_type = %result.error_type,
@@ -191,15 +191,13 @@ async fn call_openai_compatible(
     if !resp.status().is_success() {
         let status = resp.status();
         let text = resp.text().await.unwrap_or_default();
-        return Err(AppError::AiError(format!(
-            "API error {}: {}",
-            status, text
-        )));
+        return Err(AppError::AiError(format!("API error {}: {}", status, text)));
     }
 
-    let json: serde_json::Value = resp.json().await.map_err(|e| {
-        AppError::AiError(format!("Failed to parse API response: {}", e))
-    })?;
+    let json: serde_json::Value = resp
+        .json()
+        .await
+        .map_err(|e| AppError::AiError(format!("Failed to parse API response: {}", e)))?;
 
     let content = json["choices"][0]["message"]["content"]
         .as_str()
@@ -211,11 +209,7 @@ async fn call_openai_compatible(
 
 // -- Anthropic (Claude) API --
 
-async fn call_anthropic(
-    api_key: &str,
-    model: &str,
-    prompt: &str,
-) -> Result<String, AppError> {
+async fn call_anthropic(api_key: &str, model: &str, prompt: &str) -> Result<String, AppError> {
     let body = serde_json::json!({
         "model": model,
         "max_tokens": 1024,
@@ -245,9 +239,10 @@ async fn call_anthropic(
         )));
     }
 
-    let json: serde_json::Value = resp.json().await.map_err(|e| {
-        AppError::AiError(format!("Failed to parse Anthropic response: {}", e))
-    })?;
+    let json: serde_json::Value = resp
+        .json()
+        .await
+        .map_err(|e| AppError::AiError(format!("Failed to parse Anthropic response: {}", e)))?;
 
     let content = json["content"][0]["text"]
         .as_str()
@@ -259,11 +254,7 @@ async fn call_anthropic(
 
 // -- Google Gemini API --
 
-async fn call_gemini(
-    api_key: &str,
-    model: &str,
-    prompt: &str,
-) -> Result<String, AppError> {
+async fn call_gemini(api_key: &str, model: &str, prompt: &str) -> Result<String, AppError> {
     let url = format!(
         "https://generativelanguage.googleapis.com/v1beta/models/{}:generateContent?key={}",
         model, api_key
@@ -297,9 +288,10 @@ async fn call_gemini(
         )));
     }
 
-    let json: serde_json::Value = resp.json().await.map_err(|e| {
-        AppError::AiError(format!("Failed to parse Gemini response: {}", e))
-    })?;
+    let json: serde_json::Value = resp
+        .json()
+        .await
+        .map_err(|e| AppError::AiError(format!("Failed to parse Gemini response: {}", e)))?;
 
     let content = json["candidates"][0]["content"]["parts"][0]["text"]
         .as_str()
@@ -307,4 +299,177 @@ async fn call_gemini(
         .to_string();
 
     Ok(content)
+}
+
+// -- Streaming API calls (OpenAI-compatible only) --
+
+/// Stream AI response chunks via callback.
+pub async fn analyze_problem_streaming(
+    pool: &SqlitePool,
+    problem_id: &str,
+    on_chunk: impl Fn(&str),
+) -> Result<String, AppError> {
+    let provider = repo::get_setting(pool, "ai_provider")
+        .await?
+        .unwrap_or_else(|| "openai".into());
+    let api_key = repo::get_setting(pool, "ai_api_key")
+        .await?
+        .unwrap_or_default();
+    let model = repo::get_setting(pool, "ai_model")
+        .await?
+        .unwrap_or_else(|| "gpt-4o".into());
+    let base_url = repo::get_setting(pool, "ai_base_url")
+        .await?
+        .unwrap_or_default();
+
+    info!("Starting streaming AI analysis");
+
+    if api_key.is_empty() {
+        return Err(AppError::InvalidInput(
+            "Please configure AI API key in Settings first.".into(),
+        ));
+    }
+
+    let problem = repo::get_problem(pool, problem_id).await?;
+    let submissions = repo::list_submissions_by_problem(pool, problem_id).await?;
+    let notes = repo::list_notes_by_problem(pool, problem_id).await?;
+
+    let prompt = build_analysis_prompt(&problem.title, &submissions, &notes);
+
+    let response = match provider.as_str() {
+        "anthropic" => {
+            on_chunk("(streaming not supported for Anthropic, please wait...)\n");
+            call_anthropic(&api_key, &model, &prompt).await?
+        }
+        "google" => {
+            on_chunk("(streaming not supported for Gemini, please wait...)\n");
+            call_gemini(&api_key, &model, &prompt).await?
+        }
+        _ => {
+            call_openai_compatible_streaming(&api_key, &model, &base_url, &prompt, &on_chunk)
+                .await?
+        }
+    };
+
+    info!("Streaming AI analysis complete ({} bytes)", response.len());
+    Ok(response)
+}
+
+/// Call OpenAI-compatible API with SSE streaming.
+async fn call_openai_compatible_streaming(
+    api_key: &str,
+    model: &str,
+    base_url: &str,
+    prompt: &str,
+    on_chunk: &impl Fn(&str),
+) -> Result<String, AppError> {
+    let url = if base_url.is_empty() {
+        "https://api.openai.com/v1/chat/completions".to_string()
+    } else {
+        format!("{}/chat/completions", base_url.trim_end_matches('/'))
+    };
+
+    let body = serde_json::json!({
+        "model": model,
+        "messages": [
+            {"role": "system", "content": "You are an expert algorithm coach. Always respond in valid JSON."},
+            {"role": "user", "content": prompt}
+        ],
+        "temperature": 0.3,
+        "max_tokens": 1024,
+        "stream": true
+    });
+
+    let client = reqwest::Client::new();
+    let resp = client
+        .post(&url)
+        .header("Authorization", format!("Bearer {}", api_key))
+        .header("Content-Type", "application/json")
+        .json(&body)
+        .send()
+        .await
+        .map_err(|e| AppError::AiError(format!("Streaming API request failed: {}", e)))?;
+
+    if !resp.status().is_success() {
+        let status = resp.status();
+        let text = resp.text().await.unwrap_or_default();
+        return Err(AppError::AiError(format!("API error {}: {}", status, text)));
+    }
+
+    let mut full_text = String::new();
+    let mut pending = String::new();
+    let mut stream = resp.bytes_stream();
+
+    while let Some(chunk_result) = stream.next().await {
+        let chunk =
+            chunk_result.map_err(|e| AppError::AiError(format!("Stream read error: {}", e)))?;
+        pending.push_str(&String::from_utf8_lossy(&chunk));
+
+        while let Some(newline_index) = pending.find('\n') {
+            let line = pending[..newline_index].trim().to_string();
+            pending.drain(..=newline_index);
+            append_openai_stream_line(&line, &mut full_text, on_chunk);
+        }
+    }
+
+    if !pending.trim().is_empty() {
+        append_openai_stream_line(pending.trim(), &mut full_text, on_chunk);
+    }
+
+    if full_text.is_empty() {
+        return Err(AppError::AiError("AI returned empty response".into()));
+    }
+
+    Ok(full_text)
+}
+
+fn append_openai_stream_line(line: &str, full_text: &mut String, on_chunk: &impl Fn(&str)) {
+    if line.is_empty() || line == "data: [DONE]" {
+        return;
+    }
+
+    let Some(data) = line.strip_prefix("data: ") else {
+        return;
+    };
+
+    let Ok(json) = serde_json::from_str::<serde_json::Value>(data) else {
+        return;
+    };
+
+    if let Some(delta) = json["choices"][0]["delta"]["content"].as_str() {
+        full_text.push_str(delta);
+        on_chunk(delta);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::append_openai_stream_line;
+
+    #[test]
+    fn appends_openai_stream_content_delta() {
+        let mut full_text = String::new();
+        let chunks = std::cell::RefCell::new(Vec::new());
+
+        append_openai_stream_line(
+            r#"data: {"choices":[{"delta":{"content":"hello"}}]}"#,
+            &mut full_text,
+            &|chunk| chunks.borrow_mut().push(chunk.to_string()),
+        );
+
+        assert_eq!(full_text, "hello");
+        assert_eq!(chunks.into_inner(), vec!["hello"]);
+    }
+
+    #[test]
+    fn ignores_done_and_non_content_lines() {
+        let mut full_text = String::new();
+        let chunks: Vec<String> = Vec::new();
+
+        append_openai_stream_line("data: [DONE]", &mut full_text, &|_| {});
+        append_openai_stream_line("event: ping", &mut full_text, &|_| {});
+
+        assert!(full_text.is_empty());
+        assert!(chunks.is_empty());
+    }
 }

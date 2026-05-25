@@ -1,3 +1,4 @@
+import { Channel, invoke } from "@tauri-apps/api/core";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -43,7 +44,6 @@ import type {
 
 // API helpers
 async function api<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
-	const { invoke } = await import("@tauri-apps/api/core");
 	return invoke<T>(cmd, args);
 }
 
@@ -148,12 +148,23 @@ export function ProblemDetailPage() {
 
 	const [analyzing, setAnalyzing] = useState(false);
 	const [analysisError, setAnalysisError] = useState("");
+	const [analysisStream, setAnalysisStream] = useState("");
 
 	const analyzeMutation = useMutation({
-		mutationFn: () => api("analyze_problem", { problemId: id }),
+		mutationFn: async () => {
+			const channel = new Channel<string>((chunk) => {
+				setAnalysisStream((current) => current + chunk);
+			});
+
+			return api("analyze_problem_streaming", {
+				problemId: id,
+				channel,
+			});
+		},
 		onMutate: () => {
 			setAnalyzing(true);
 			setAnalysisError("");
+			setAnalysisStream("");
 		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["errors", id] });
@@ -162,6 +173,7 @@ export function ProblemDetailPage() {
 		},
 		onError: (err) => {
 			// Tauri errors come as strings, not Error objects
+			setAnalysisStream("");
 			setAnalysisError(
 				typeof err === "string"
 					? err
@@ -506,6 +518,16 @@ export function ProblemDetailPage() {
 										<p className="text-xs text-muted-foreground">
 											Check ~/.local/share/acmind/acmind.log for details.
 										</p>
+									</div>
+								)}
+								{analysisStream && (
+									<div className="max-h-64 overflow-auto rounded-md border bg-muted/40 p-3">
+										<p className="mb-2 text-xs font-medium text-muted-foreground">
+											AI response stream
+										</p>
+										<pre className="whitespace-pre-wrap break-words text-xs leading-relaxed text-muted-foreground">
+											{analysisStream}
+										</pre>
 									</div>
 								)}
 								<Button

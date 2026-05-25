@@ -37,6 +37,7 @@ impl Storage {
     }
 
     /// Write a file.
+    #[allow(dead_code)]
     pub fn write_file(&self, path: &str, content: &str) -> Result<(), AppError> {
         if let Some(parent) = std::path::Path::new(path).parent() {
             std::fs::create_dir_all(parent)?;

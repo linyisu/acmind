@@ -1,9 +1,9 @@
-use tauri::State;
 use crate::db::models::*;
 use crate::db::repo;
 use crate::error::AppError;
 use crate::storage::Storage;
 use sqlx::SqlitePool;
+use tauri::State;
 use tracing::info;
 
 // -- Problems --
@@ -135,14 +135,13 @@ pub async fn create_submission(
     let sub = repo::create_submission(&pool, &input, &code_path).await?;
 
     // Rename file to use real submission id
-    let new_code_path =
-        storage.save_submission(
-            &input.problem_id,
-            &sub.id,
-            &input.status,
-            &input.language,
-            &input.code_text,
-        )?;
+    let new_code_path = storage.save_submission(
+        &input.problem_id,
+        &sub.id,
+        &input.status,
+        &input.language,
+        &input.code_text,
+    )?;
 
     // Update code_path in DB to the new filename
     sqlx::query("UPDATE submissions SET code_path = ?1 WHERE id = ?2")
@@ -197,10 +196,7 @@ pub async fn update_note(
 }
 
 #[tauri::command(rename_all = "camelCase")]
-pub async fn delete_note(
-    pool: State<'_, SqlitePool>,
-    id: String,
-) -> Result<(), AppError> {
+pub async fn delete_note(pool: State<'_, SqlitePool>, id: String) -> Result<(), AppError> {
     repo::delete_note(&pool, &id).await?;
     Ok(())
 }
@@ -243,9 +239,7 @@ pub async fn create_knowledge_point(
 // -- Reports --
 
 #[tauri::command(rename_all = "camelCase")]
-pub async fn list_reports(
-    pool: State<'_, SqlitePool>,
-) -> Result<Vec<Report>, AppError> {
+pub async fn list_reports(pool: State<'_, SqlitePool>) -> Result<Vec<Report>, AppError> {
     Ok(repo::list_reports(&pool).await?)
 }
 
@@ -284,10 +278,7 @@ fn build_report_content(
         "- Total Submissions: {}\n",
         stats.total_submissions
     ));
-    content.push_str(&format!(
-        "- AC Rate: {:.1}%\n",
-        ac_rate
-    ));
+    content.push_str(&format!("- AC Rate: {:.1}%\n", ac_rate));
 
     content.push_str("\n## Submission Breakdown\n\n");
     content.push_str(&format!("- AC: {}\n", stats.ac_count));
@@ -354,6 +345,58 @@ pub async fn analyze_problem(
     Ok(analysis)
 }
 
+#[tauri::command(rename_all = "camelCase")]
+pub async fn analyze_problem_streaming(
+    pool: State<'_, SqlitePool>,
+    problem_id: String,
+    channel: tauri::ipc::Channel<String>,
+) -> Result<crate::ai::AnalysisResult, AppError> {
+    let pid = problem_id.clone();
+    let full_response = crate::ai::analyze_problem_streaming(&pool, &problem_id, |chunk| {
+        let _ = channel.send(chunk.to_string());
+    })
+    .await?;
+
+    // Parse the full response into AnalysisResult
+    let analysis = crate::ai::parse_analysis_response(&full_response)?;
+
+    // Save to DB (same as analyze_problem)
+    let submissions = repo::list_submissions_by_problem(&pool, &pid).await?;
+    if let Some(wa_sub) = submissions.iter().find(|s| s.status == "WA") {
+        let error_input = crate::db::models::CreateErrorInput {
+            problem_id: pid.clone(),
+            submission_id: wa_sub.id.clone(),
+            error_type: analysis.error_type.clone(),
+            root_cause: analysis.root_cause.clone(),
+            fix_summary: analysis.fix_summary.clone(),
+            related_knowledge: analysis.knowledge_points.clone(),
+        };
+        repo::create_error_analysis(&pool, &error_input).await?;
+    }
+
+    let note_content = format!(
+        "# AI Analysis\n\n## Root Cause\n{}\n\n## Fix\n{}\n\n## Suggestions\n{}",
+        analysis.root_cause,
+        analysis.fix_summary,
+        analysis
+            .suggestions
+            .iter()
+            .map(|s| format!("- {}", s))
+            .collect::<Vec<_>>()
+            .join("\n")
+    );
+
+    let note_input = crate::db::models::CreateNoteInput {
+        problem_id: pid,
+        note_type: "ai".into(),
+        content: note_content,
+        source_url: None,
+    };
+    repo::create_note(&pool, &note_input).await?;
+
+    Ok(analysis)
+}
+
 // -- Dashboard --
 
 #[tauri::command(rename_all = "camelCase")]
@@ -398,5 +441,9 @@ pub async fn get_all_settings(
 
 #[tauri::command(rename_all = "camelCase")]
 pub async fn get_log_path(storage: State<'_, Storage>) -> Result<String, AppError> {
-    Ok(storage.base_dir().join("acmind.log").to_string_lossy().to_string())
+    Ok(storage
+        .base_dir()
+        .join("acmind.log")
+        .to_string_lossy()
+        .to_string())
 }

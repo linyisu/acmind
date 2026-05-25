@@ -5,9 +5,9 @@ mod error;
 mod storage;
 
 use db::init_db;
+use std::path::PathBuf;
 use storage::Storage;
 use tauri::Manager;
-use std::path::PathBuf;
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
 fn setup_tracing() {
@@ -83,6 +83,7 @@ pub fn run() {
             commands::list_reports,
             commands::generate_report,
             commands::analyze_problem,
+            commands::analyze_problem_streaming,
             commands::get_dashboard_stats,
             commands::get_error_type_stats,
             commands::get_setting,
