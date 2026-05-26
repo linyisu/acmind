@@ -33,6 +33,31 @@
     },
     {
       "type": "file",
+      "name": "browser-extension-firefox/background.js",
+      "file": "browser-extension-firefox/background.js"
+    },
+    {
+      "type": "file",
+      "name": "browser-extension-firefox/content.css",
+      "file": "browser-extension-firefox/content.css"
+    },
+    {
+      "type": "file",
+      "name": "browser-extension-firefox/content.js",
+      "file": "browser-extension-firefox/content.js"
+    },
+    {
+      "type": "file",
+      "name": "browser-extension-firefox/popup.js",
+      "file": "browser-extension-firefox/popup.js"
+    },
+    {
+      "type": "file",
+      "name": "browser-extension-firefox/vjudge-scraper.js",
+      "file": "browser-extension-firefox/vjudge-scraper.js"
+    },
+    {
+      "type": "file",
       "name": "browser-extension/content/codeforces.js",
       "file": "browser-extension/content/codeforces.js"
     },
@@ -40,11 +65,6 @@
       "type": "file",
       "name": "src/lib/api/tauri.ts",
       "file": "src/lib/api/tauri.ts"
-    },
-    {
-      "type": "file",
-      "name": "src-tauri/target/debug/build/acmind-4219c492903256c8/out/__global-api-script.js",
-      "file": "src-tauri/target/debug/build/acmind-4219c492903256c8/out/__global-api-script.js"
     },
     {
       "type": "file",
@@ -58,18 +78,23 @@
     },
     {
       "type": "file",
+      "name": "src-tauri/target/debug/build/acmind-4219c492903256c8/out/__global-api-script.js",
+      "file": "src-tauri/target/debug/build/acmind-4219c492903256c8/out/__global-api-script.js"
+    },
+    {
+      "type": "file",
       "name": "src-tauri/target/debug/build/acmind-8c6b2f919b0c19f3/out/__global-api-script.js",
       "file": "src-tauri/target/debug/build/acmind-8c6b2f919b0c19f3/out/__global-api-script.js"
     },
     {
       "type": "file",
-      "name": "src-tauri/target/debug/build/acmind-eabd6c6bf4fc4165/out/__global-api-script.js",
-      "file": "src-tauri/target/debug/build/acmind-eabd6c6bf4fc4165/out/__global-api-script.js"
+      "name": "src-tauri/target/debug/build/acmind-ef2021c9b17d4f5e/out/__global-api-script.js",
+      "file": "src-tauri/target/debug/build/acmind-ef2021c9b17d4f5e/out/__global-api-script.js"
     },
     {
       "type": "file",
-      "name": "src-tauri/target/debug/build/acmind-ef2021c9b17d4f5e/out/__global-api-script.js",
-      "file": "src-tauri/target/debug/build/acmind-ef2021c9b17d4f5e/out/__global-api-script.js"
+      "name": "src-tauri/target/debug/build/acmind-eabd6c6bf4fc4165/out/__global-api-script.js",
+      "file": "src-tauri/target/debug/build/acmind-eabd6c6bf4fc4165/out/__global-api-script.js"
     },
     {
       "type": "dependency",
@@ -419,6 +444,31 @@
     },
     {
       "type": "file",
+      "name": "browser-extension-firefox/background.js",
+      "file": "browser-extension-firefox/background.js"
+    },
+    {
+      "type": "file",
+      "name": "browser-extension-firefox/content.css",
+      "file": "browser-extension-firefox/content.css"
+    },
+    {
+      "type": "file",
+      "name": "browser-extension-firefox/content.js",
+      "file": "browser-extension-firefox/content.js"
+    },
+    {
+      "type": "file",
+      "name": "browser-extension-firefox/popup.js",
+      "file": "browser-extension-firefox/popup.js"
+    },
+    {
+      "type": "file",
+      "name": "browser-extension-firefox/vjudge-scraper.js",
+      "file": "browser-extension-firefox/vjudge-scraper.js"
+    },
+    {
+      "type": "file",
       "name": "browser-extension/content/codeforces.js",
       "file": "browser-extension/content/codeforces.js"
     },
@@ -426,11 +476,6 @@
       "type": "file",
       "name": "src/lib/api/tauri.ts",
       "file": "src/lib/api/tauri.ts"
-    },
-    {
-      "type": "file",
-      "name": "src-tauri/target/debug/build/acmind-4219c492903256c8/out/__global-api-script.js",
-      "file": "src-tauri/target/debug/build/acmind-4219c492903256c8/out/__global-api-script.js"
     },
     {
       "type": "file",
@@ -444,18 +489,23 @@
     },
     {
       "type": "file",
+      "name": "src-tauri/target/debug/build/acmind-4219c492903256c8/out/__global-api-script.js",
+      "file": "src-tauri/target/debug/build/acmind-4219c492903256c8/out/__global-api-script.js"
+    },
+    {
+      "type": "file",
       "name": "src-tauri/target/debug/build/acmind-8c6b2f919b0c19f3/out/__global-api-script.js",
       "file": "src-tauri/target/debug/build/acmind-8c6b2f919b0c19f3/out/__global-api-script.js"
     },
     {
       "type": "file",
-      "name": "src-tauri/target/debug/build/acmind-eabd6c6bf4fc4165/out/__global-api-script.js",
-      "file": "src-tauri/target/debug/build/acmind-eabd6c6bf4fc4165/out/__global-api-script.js"
+      "name": "src-tauri/target/debug/build/acmind-ef2021c9b17d4f5e/out/__global-api-script.js",
+      "file": "src-tauri/target/debug/build/acmind-ef2021c9b17d4f5e/out/__global-api-script.js"
     },
     {
       "type": "file",
-      "name": "src-tauri/target/debug/build/acmind-ef2021c9b17d4f5e/out/__global-api-script.js",
-      "file": "src-tauri/target/debug/build/acmind-ef2021c9b17d4f5e/out/__global-api-script.js"
+      "name": "src-tauri/target/debug/build/acmind-eabd6c6bf4fc4165/out/__global-api-script.js",
+      "file": "src-tauri/target/debug/build/acmind-eabd6c6bf4fc4165/out/__global-api-script.js"
     }
   ],
   "unusedDeps": [
@@ -521,5 +571,5 @@
     }
   ],
   "unlistedDeps": [],
-  "summary": "Found 45 issues"
+  "summary": "Found 50 issues"
 }

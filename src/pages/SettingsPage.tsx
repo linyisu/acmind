@@ -174,17 +174,44 @@ export function SettingsPage() {
 							<div className="rounded-md bg-muted/50 p-3 text-sm space-y-2">
 								<p className="font-medium">Chrome / Edge / Brave 安装步骤：</p>
 								<ol className="list-decimal list-inside space-y-1 text-muted-foreground">
-									<li>打开 <code className="text-xs bg-muted px-1 rounded">chrome://extensions</code></li>
+									<li>
+										打开{" "}
+										<code className="text-xs bg-muted px-1 rounded">
+											chrome://extensions
+										</code>
+									</li>
 									<li>开启右上角「开发者模式」</li>
-									<li>点击「加载已解压的扩展程序」，选择 <code className="text-xs bg-muted px-1 rounded">browser-extension</code> 目录</li>
+									<li>
+										点击「加载已解压的扩展程序」，选择{" "}
+										<code className="text-xs bg-muted px-1 rounded">
+											browser-extension
+										</code>{" "}
+										目录
+									</li>
 								</ol>
 								<p className="font-medium mt-3">Firefox 安装步骤：</p>
 								<ol className="list-decimal list-inside space-y-1 text-muted-foreground">
-									<li>打开 <code className="text-xs bg-muted px-1 rounded">about:debugging#/runtime/this-firefox</code></li>
+									<li>
+										打开{" "}
+										<code className="text-xs bg-muted px-1 rounded">
+											about:debugging#/runtime/this-firefox
+										</code>
+									</li>
 									<li>点击「临时载入附加组件」</li>
-									<li>选择 <code className="text-xs bg-muted px-1 rounded">browser-extension-firefox/manifest.json</code></li>
+									<li>
+										选择{" "}
+										<code className="text-xs bg-muted px-1 rounded">
+											browser-extension-firefox/manifest.json
+										</code>
+									</li>
 								</ol>
-								<p className="mt-2 text-xs">安装后打开 <code className="text-xs bg-muted px-1 rounded">vjudge.net</code> 并登录，页面会自动显示导入按钮。</p>
+								<p className="mt-2 text-xs">
+									安装后打开{" "}
+									<code className="text-xs bg-muted px-1 rounded">
+										vjudge.net
+									</code>{" "}
+									并登录，页面会自动显示导入按钮。
+								</p>
 							</div>
 							<p className="text-xs text-muted-foreground">
 								导入服务运行在{" "}
