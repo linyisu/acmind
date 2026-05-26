@@ -165,21 +165,33 @@ export function SettingsPage() {
 								浏览器扩展（推荐）
 							</CardTitle>
 							<CardDescription>
-								安装 ACMind 浏览器扩展后，在 VJudge 页面点击「导入」按钮即可一键抓取题目、提交和源码，无需手动复制 Cookie。
+								安装 ACMind 浏览器扩展后，在 VJudge
+								页面点击「导入」按钮即可一键抓取题目、提交和源码，无需手动复制
+								Cookie。
 							</CardDescription>
 						</CardHeader>
 						<CardContent className="space-y-3">
 							<div className="rounded-md bg-muted/50 p-3 text-sm space-y-2">
-								<p className="font-medium">安装步骤：</p>
+								<p className="font-medium">Chrome / Edge / Brave 安装步骤：</p>
 								<ol className="list-decimal list-inside space-y-1 text-muted-foreground">
-									<li>打开 Chrome，访问 <code className="text-xs bg-muted px-1 rounded">chrome://extensions</code></li>
+									<li>打开 <code className="text-xs bg-muted px-1 rounded">chrome://extensions</code></li>
 									<li>开启右上角「开发者模式」</li>
-									<li>点击「加载已解压的扩展程序」，选择项目中的 <code className="text-xs bg-muted px-1 rounded">browser-extension</code> 目录</li>
-									<li>打开 <code className="text-xs bg-muted px-1 rounded">vjudge.net</code>，登录后页面会自动显示导入按钮</li>
+									<li>点击「加载已解压的扩展程序」，选择 <code className="text-xs bg-muted px-1 rounded">browser-extension</code> 目录</li>
 								</ol>
+								<p className="font-medium mt-3">Firefox 安装步骤：</p>
+								<ol className="list-decimal list-inside space-y-1 text-muted-foreground">
+									<li>打开 <code className="text-xs bg-muted px-1 rounded">about:debugging#/runtime/this-firefox</code></li>
+									<li>点击「临时载入附加组件」</li>
+									<li>选择 <code className="text-xs bg-muted px-1 rounded">browser-extension-firefox/manifest.json</code></li>
+								</ol>
+								<p className="mt-2 text-xs">安装后打开 <code className="text-xs bg-muted px-1 rounded">vjudge.net</code> 并登录，页面会自动显示导入按钮。</p>
 							</div>
 							<p className="text-xs text-muted-foreground">
-								导入服务运行在 <code className="text-xs bg-muted px-1 rounded">127.0.0.1:18921</code>，扩展会自动连接。无需配置 Cookie。
+								导入服务运行在{" "}
+								<code className="text-xs bg-muted px-1 rounded">
+									127.0.0.1:18921
+								</code>
+								，扩展会自动连接。无需配置 Cookie。
 							</p>
 						</CardContent>
 					</Card>
@@ -191,7 +203,8 @@ export function SettingsPage() {
 								VJudge 手动配置（备选）
 							</CardTitle>
 							<CardDescription>
-								如果不使用浏览器扩展，也可以手动填写 Cookie 来同步 VJudge 数据。推荐优先使用浏览器扩展。
+								如果不使用浏览器扩展，也可以手动填写 Cookie 来同步 VJudge
+								数据。推荐优先使用浏览器扩展。
 							</CardDescription>
 						</CardHeader>
 						<CardContent className="space-y-4">

@@ -20,8 +20,11 @@ One-click import of VJudge problems, submissions, and source code into ACMind.
 
 ### Firefox
 
-See `browser-extension-firefox/` for the Firefox-compatible version.
-Install via `about:debugging#/runtime/this-firefox` → "Load Temporary Add-on" → select `browser-extension-firefox/manifest.json`.
+1. Open `about:debugging#/runtime/this-firefox`
+2. Click **Load Temporary Add-on**
+3. Select `browser-extension-firefox/manifest.json`
+4. The extension is loaded until Firefox restarts
+   - For permanent install: submit to AMO or use `about:config` → `xpinstall.signatures.required` = false (Nightly/Developer Edition)
 
 ## Usage
 
@@ -54,3 +57,4 @@ Install via `about:debugging#/runtime/this-firefox` → "Load Temporary Add-on" 
 - **"ACMind not running"**: Make sure the ACMind desktop app is launched
 - **Import button not appearing**: Refresh the vjudge page; check extension is enabled
 - **Source code not imported**: Source code requires viewing a solution page directly
+- **Firefox: extension disappears after restart**: Use `about:debugging` to reload, or set `xpinstall.signatures.required=false` in `about:config` for permanent unsigned install
