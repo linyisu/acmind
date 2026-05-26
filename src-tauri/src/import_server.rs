@@ -108,24 +108,34 @@ impl ServerState {
 }
 
 /// Start the import HTTP server on a background thread.
-/// Must be called from within a tokio runtime context so we can capture the handle.
+/// Creates its own Tokio runtime for async DB operations.
 pub fn start_import_server(pool: SqlitePool, storage: Storage) -> ImportServerHandle {
-    let rt = Handle::try_current().expect("import server requires a Tokio runtime");
-    let state = Arc::new(ServerState { pool, storage, rt });
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .expect("Failed to create Tokio runtime for import server");
+    let handle = rt.handle().clone();
+    let state = Arc::new(ServerState {
+        pool,
+        storage,
+        rt: handle,
+    });
     let server = tiny_http::Server::http(BIND_ADDR).expect("Failed to start ACMind import server");
 
     tracing::info!(target: "app_lib::import_server", "Import server listening on {}", BIND_ADDR);
 
-    let handle = ImportServerHandle::new();
+    let import_handle = ImportServerHandle::new();
 
     thread::spawn(move || {
+        // Enter the runtime so Handle::block_on works on nested threads too
+        let _guard = rt.enter();
         for request in server.incoming_requests() {
             let state = Arc::clone(&state);
             thread::spawn(move || handle_request(state, request));
         }
     });
 
-    handle
+    import_handle
 }
 
 pub struct ImportServerHandle {}
