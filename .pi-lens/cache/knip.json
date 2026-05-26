@@ -3,6 +3,41 @@
   "issues": [
     {
       "type": "file",
+      "name": "browser-extension/background.js",
+      "file": "browser-extension/background.js"
+    },
+    {
+      "type": "file",
+      "name": "browser-extension/content.css",
+      "file": "browser-extension/content.css"
+    },
+    {
+      "type": "file",
+      "name": "browser-extension/content.js",
+      "file": "browser-extension/content.js"
+    },
+    {
+      "type": "file",
+      "name": "browser-extension/popup.css",
+      "file": "browser-extension/popup.css"
+    },
+    {
+      "type": "file",
+      "name": "browser-extension/popup.js",
+      "file": "browser-extension/popup.js"
+    },
+    {
+      "type": "file",
+      "name": "browser-extension/vjudge-scraper.js",
+      "file": "browser-extension/vjudge-scraper.js"
+    },
+    {
+      "type": "file",
+      "name": "browser-extension/content/codeforces.js",
+      "file": "browser-extension/content/codeforces.js"
+    },
+    {
+      "type": "file",
       "name": "src/lib/api/tauri.ts",
       "file": "src/lib/api/tauri.ts"
     },
@@ -18,8 +53,23 @@
     },
     {
       "type": "file",
+      "name": "src-tauri/target/debug/build/acmind-22850115b1248aae/out/__global-api-script.js",
+      "file": "src-tauri/target/debug/build/acmind-22850115b1248aae/out/__global-api-script.js"
+    },
+    {
+      "type": "file",
+      "name": "src-tauri/target/debug/build/acmind-8c6b2f919b0c19f3/out/__global-api-script.js",
+      "file": "src-tauri/target/debug/build/acmind-8c6b2f919b0c19f3/out/__global-api-script.js"
+    },
+    {
+      "type": "file",
       "name": "src-tauri/target/debug/build/acmind-eabd6c6bf4fc4165/out/__global-api-script.js",
       "file": "src-tauri/target/debug/build/acmind-eabd6c6bf4fc4165/out/__global-api-script.js"
+    },
+    {
+      "type": "file",
+      "name": "src-tauri/target/debug/build/acmind-ef2021c9b17d4f5e/out/__global-api-script.js",
+      "file": "src-tauri/target/debug/build/acmind-ef2021c9b17d4f5e/out/__global-api-script.js"
     },
     {
       "type": "dependency",
@@ -59,39 +109,33 @@
     },
     {
       "type": "dependency",
-      "name": "react-markdown",
-      "file": "package.json",
-      "line": 33
-    },
-    {
-      "type": "dependency",
       "name": "recharts",
       "file": "package.json",
-      "line": 35
-    },
-    {
-      "type": "dependency",
-      "name": "remark-gfm",
-      "file": "package.json",
-      "line": 36
+      "line": 38
     },
     {
       "type": "dependency",
       "name": "shiki",
       "file": "package.json",
-      "line": 37
+      "line": 42
     },
     {
       "type": "dependency",
       "name": "zustand",
       "file": "package.json",
-      "line": 40
+      "line": 45
     },
     {
       "type": "devDependency",
       "name": "@tauri-apps/cli",
       "file": "package.json",
-      "line": 45
+      "line": 50
+    },
+    {
+      "type": "export",
+      "name": "resources",
+      "file": "src/lib/i18n.ts",
+      "line": 4
     },
     {
       "type": "export",
@@ -188,6 +232,12 @@
       "name": "ErrorCategory",
       "file": "src/lib/types.ts",
       "line": 38
+    },
+    {
+      "type": "export",
+      "name": "ErrorAnalysis",
+      "file": "src/lib/types.ts",
+      "line": 49
     },
     {
       "type": "export",
@@ -211,6 +261,12 @@
   "unusedExports": [
     {
       "type": "export",
+      "name": "resources",
+      "file": "src/lib/i18n.ts",
+      "line": 4
+    },
+    {
+      "type": "export",
       "name": "badgeVariants",
       "file": "src/components/ui/badge.tsx",
       "line": 38
@@ -307,6 +363,12 @@
     },
     {
       "type": "export",
+      "name": "ErrorAnalysis",
+      "file": "src/lib/types.ts",
+      "line": 49
+    },
+    {
+      "type": "export",
       "name": "KnowledgePoint",
       "file": "src/lib/types.ts",
       "line": 60
@@ -327,6 +389,41 @@
   "unusedFiles": [
     {
       "type": "file",
+      "name": "browser-extension/background.js",
+      "file": "browser-extension/background.js"
+    },
+    {
+      "type": "file",
+      "name": "browser-extension/content.css",
+      "file": "browser-extension/content.css"
+    },
+    {
+      "type": "file",
+      "name": "browser-extension/content.js",
+      "file": "browser-extension/content.js"
+    },
+    {
+      "type": "file",
+      "name": "browser-extension/popup.css",
+      "file": "browser-extension/popup.css"
+    },
+    {
+      "type": "file",
+      "name": "browser-extension/popup.js",
+      "file": "browser-extension/popup.js"
+    },
+    {
+      "type": "file",
+      "name": "browser-extension/vjudge-scraper.js",
+      "file": "browser-extension/vjudge-scraper.js"
+    },
+    {
+      "type": "file",
+      "name": "browser-extension/content/codeforces.js",
+      "file": "browser-extension/content/codeforces.js"
+    },
+    {
+      "type": "file",
       "name": "src/lib/api/tauri.ts",
       "file": "src/lib/api/tauri.ts"
     },
@@ -342,8 +439,23 @@
     },
     {
       "type": "file",
+      "name": "src-tauri/target/debug/build/acmind-22850115b1248aae/out/__global-api-script.js",
+      "file": "src-tauri/target/debug/build/acmind-22850115b1248aae/out/__global-api-script.js"
+    },
+    {
+      "type": "file",
+      "name": "src-tauri/target/debug/build/acmind-8c6b2f919b0c19f3/out/__global-api-script.js",
+      "file": "src-tauri/target/debug/build/acmind-8c6b2f919b0c19f3/out/__global-api-script.js"
+    },
+    {
+      "type": "file",
       "name": "src-tauri/target/debug/build/acmind-eabd6c6bf4fc4165/out/__global-api-script.js",
       "file": "src-tauri/target/debug/build/acmind-eabd6c6bf4fc4165/out/__global-api-script.js"
+    },
+    {
+      "type": "file",
+      "name": "src-tauri/target/debug/build/acmind-ef2021c9b17d4f5e/out/__global-api-script.js",
+      "file": "src-tauri/target/debug/build/acmind-ef2021c9b17d4f5e/out/__global-api-script.js"
     }
   ],
   "unusedDeps": [
@@ -385,41 +497,29 @@
     },
     {
       "type": "dependency",
-      "name": "react-markdown",
-      "file": "package.json",
-      "line": 33
-    },
-    {
-      "type": "dependency",
       "name": "recharts",
       "file": "package.json",
-      "line": 35
-    },
-    {
-      "type": "dependency",
-      "name": "remark-gfm",
-      "file": "package.json",
-      "line": 36
+      "line": 38
     },
     {
       "type": "dependency",
       "name": "shiki",
       "file": "package.json",
-      "line": 37
+      "line": 42
     },
     {
       "type": "dependency",
       "name": "zustand",
       "file": "package.json",
-      "line": 40
+      "line": 45
     },
     {
       "type": "devDependency",
       "name": "@tauri-apps/cli",
       "file": "package.json",
-      "line": 45
+      "line": 50
     }
   ],
   "unlistedDeps": [],
-  "summary": "Found 35 issues"
+  "summary": "Found 45 issues"
 }

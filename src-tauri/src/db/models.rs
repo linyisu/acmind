@@ -78,6 +78,7 @@ pub struct Submission {
     pub runtime: Option<i32>,
     pub memory: Option<i32>,
     pub note: Option<String>,
+    pub external_run_id: Option<String>,
     pub submitted_at: DateTime<Utc>,
 }
 
@@ -90,6 +91,8 @@ pub struct CreateSubmissionInput {
     pub runtime: Option<i32>,
     pub memory: Option<i32>,
     pub note: Option<String>,
+    pub external_run_id: Option<String>,
+    pub submitted_at: Option<DateTime<Utc>>,
 }
 
 // -- Solution Note --

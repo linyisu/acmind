@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { Plus, Trash2, ExternalLink } from "lucide-react";
+import { Plus, Trash2, ExternalLink, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -75,6 +75,10 @@ export function ProblemsPage() {
 
 	const [search, setSearch] = useState("");
 	const [dialogOpen, setDialogOpen] = useState(false);
+	const [vjudgeDialogOpen, setVjudgeDialogOpen] = useState(false);
+	const [vjudgeUrl, setVjudgeUrl] = useState("");
+	const [vjudgeMessage, setVjudgeMessage] = useState("");
+	const [vjudgeError, setVjudgeError] = useState("");
 	const [form, setForm] = useState({
 		title: "",
 		source: "Codeforces",
@@ -128,6 +132,32 @@ export function ProblemsPage() {
 		},
 	});
 
+	const importVjudgeMutation = useMutation({
+		mutationFn: async () => {
+			setVjudgeError("");
+			setVjudgeMessage("");
+			const { invoke } = await import("@tauri-apps/api/core");
+			return invoke<{
+				problem: Problem;
+				statement_imported: boolean;
+				source_synced: boolean;
+			}>("import_vjudge_problem", { url: vjudgeUrl });
+		},
+		onSuccess: (result) => {
+			queryClient.invalidateQueries({ queryKey: ["problems"] });
+			setVjudgeMessage(
+				`已导入 ${result.problem.title}，题面已保存${
+					result.source_synced ? "，源码已保存" : ""
+				}。`,
+			);
+		},
+		onError: (err) => {
+			setVjudgeError(
+				err instanceof Error ? err.message : "导入 VJudge 题目失败",
+			);
+		},
+	});
+
 	const filtered = problems?.filter(
 		(p) =>
 			p.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -145,110 +175,171 @@ export function ProblemsPage() {
 					</p>
 				</div>
 
-				<Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-					<DialogTrigger asChild>
-						<Button>
-							<Plus className="mr-2 h-4 w-4" />
-							添加题目
-						</Button>
-					</DialogTrigger>
-					<DialogContent className="sm:max-w-lg">
-						<DialogHeader>
-							<DialogTitle>{t("problems.addNew")}</DialogTitle>
-						</DialogHeader>
-						<div className="grid gap-4 py-4">
-							<div className="grid gap-2">
-								<Label htmlFor="title">{t("problems.problemTitle")}</Label>
-								<Input
-									id="title"
-									value={form.title}
-									onChange={(e) => setForm({ ...form, title: e.target.value })}
-									placeholder={t("problems.placeholderTitle")}
-								/>
-							</div>
-							<div className="grid grid-cols-2 gap-4">
-								<div className="grid gap-2">
-									<Label htmlFor="source">{t("problems.source")}</Label>
-									<Input
-										id="source"
-										value={form.source}
-										onChange={(e) =>
-											setForm({ ...form, source: e.target.value })
-										}
-									/>
-								</div>
-								<div className="grid gap-2">
-									<Label htmlFor="source_id">{t("problems.problemId")}</Label>
-									<Input
-										id="source_id"
-										value={form.source_problem_id}
-										onChange={(e) =>
-											setForm({ ...form, source_problem_id: e.target.value })
-										}
-										placeholder="e.g. 1900A"
-									/>
-								</div>
-							</div>
-							<div className="grid gap-2">
-								<Label htmlFor="url">URL</Label>
-								<Input
-									id="url"
-									value={form.url}
-									onChange={(e) => setForm({ ...form, url: e.target.value })}
-									placeholder="https://codeforces.com/..."
-								/>
-							</div>
-							<div className="grid grid-cols-2 gap-4">
-								<div className="grid gap-2">
-									<Label htmlFor="difficulty">{t("problems.difficultyRating")}</Label>
-									<Input
-										id="difficulty"
-										type="number"
-										value={form.difficulty}
-										onChange={(e) =>
-											setForm({ ...form, difficulty: e.target.value })
-										}
-										placeholder="e.g. 1600"
-									/>
-								</div>
-								<div className="grid gap-2">
-									<Label htmlFor="tags">{t("problems.tagsComma")}</Label>
-									<Input
-										id="tags"
-										value={form.tags}
-										onChange={(e) => setForm({ ...form, tags: e.target.value })}
-										placeholder="dp, greedy, graph"
-									/>
-								</div>
-							</div>
-							<div className="grid gap-2">
-								<Label htmlFor="statement">
-									{t("problems.statement")}
-								</Label>
-								<Textarea
-									id="statement"
-									rows={4}
-									value={form.statement}
-									onChange={(e) =>
-										setForm({ ...form, statement: e.target.value })
-									}
-									placeholder={t("problems.placeholderStatement")}
-								/>
-							</div>
-						</div>
-						<div className="flex justify-end gap-2">
-							<Button variant="outline" onClick={() => setDialogOpen(false)}>
-								{t("common.cancel")}
+				<div className="flex gap-2">
+					<Dialog open={vjudgeDialogOpen} onOpenChange={setVjudgeDialogOpen}>
+						<DialogTrigger asChild>
+							<Button variant="outline">
+								<Download className="mr-2 h-4 w-4" />
+								导入 VJudge
 							</Button>
-							<Button
-								onClick={() => createMutation.mutate()}
-								disabled={!form.title || createMutation.isPending}
-							>
-								{createMutation.isPending ? t("problems.adding") : t("problems.add")}
+						</DialogTrigger>
+						<DialogContent className="sm:max-w-lg">
+							<DialogHeader>
+								<DialogTitle>导入 VJudge 单题</DialogTitle>
+							</DialogHeader>
+							<div className="grid gap-4 py-4">
+								<div className="grid gap-2">
+									<Label htmlFor="vjudgeUrl">VJudge 题目链接</Label>
+									<Input
+										id="vjudgeUrl"
+										value={vjudgeUrl}
+										onChange={(event) => setVjudgeUrl(event.target.value)}
+										placeholder="https://vjudge.net/problem/%E6%B4%9B%E8%B0%B7-P1540"
+									/>
+									<p className="text-xs text-muted-foreground">
+										优先使用题目链接，例如
+										洛谷-P1540；提交链接仅用于需要同时导入源码时。
+									</p>
+								</div>
+								{vjudgeError && (
+									<p className="rounded-md bg-destructive/10 p-2 text-sm text-destructive">
+										{vjudgeError}
+									</p>
+								)}
+								{vjudgeMessage && (
+									<p className="rounded-md bg-success/10 p-2 text-sm text-success">
+										{vjudgeMessage}
+									</p>
+								)}
+							</div>
+							<div className="flex justify-end gap-2">
+								<Button
+									variant="outline"
+									onClick={() => setVjudgeDialogOpen(false)}
+								>
+									{t("common.cancel")}
+								</Button>
+								<Button
+									onClick={() => importVjudgeMutation.mutate()}
+									disabled={!vjudgeUrl.trim() || importVjudgeMutation.isPending}
+								>
+									{importVjudgeMutation.isPending ? "导入中..." : "导入"}
+								</Button>
+							</div>
+						</DialogContent>
+					</Dialog>
+
+					<Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+						<DialogTrigger asChild>
+							<Button>
+								<Plus className="mr-2 h-4 w-4" />
+								添加题目
 							</Button>
-						</div>
-					</DialogContent>
-				</Dialog>
+						</DialogTrigger>
+						<DialogContent className="sm:max-w-lg">
+							<DialogHeader>
+								<DialogTitle>{t("problems.addNew")}</DialogTitle>
+							</DialogHeader>
+							<div className="grid gap-4 py-4">
+								<div className="grid gap-2">
+									<Label htmlFor="title">{t("problems.problemTitle")}</Label>
+									<Input
+										id="title"
+										value={form.title}
+										onChange={(e) =>
+											setForm({ ...form, title: e.target.value })
+										}
+										placeholder={t("problems.placeholderTitle")}
+									/>
+								</div>
+								<div className="grid grid-cols-2 gap-4">
+									<div className="grid gap-2">
+										<Label htmlFor="source">{t("problems.source")}</Label>
+										<Input
+											id="source"
+											value={form.source}
+											onChange={(e) =>
+												setForm({ ...form, source: e.target.value })
+											}
+										/>
+									</div>
+									<div className="grid gap-2">
+										<Label htmlFor="source_id">{t("problems.problemId")}</Label>
+										<Input
+											id="source_id"
+											value={form.source_problem_id}
+											onChange={(e) =>
+												setForm({ ...form, source_problem_id: e.target.value })
+											}
+											placeholder="e.g. 1900A"
+										/>
+									</div>
+								</div>
+								<div className="grid gap-2">
+									<Label htmlFor="url">URL</Label>
+									<Input
+										id="url"
+										value={form.url}
+										onChange={(e) => setForm({ ...form, url: e.target.value })}
+										placeholder="https://codeforces.com/..."
+									/>
+								</div>
+								<div className="grid grid-cols-2 gap-4">
+									<div className="grid gap-2">
+										<Label htmlFor="difficulty">
+											{t("problems.difficultyRating")}
+										</Label>
+										<Input
+											id="difficulty"
+											type="number"
+											value={form.difficulty}
+											onChange={(e) =>
+												setForm({ ...form, difficulty: e.target.value })
+											}
+											placeholder="e.g. 1600"
+										/>
+									</div>
+									<div className="grid gap-2">
+										<Label htmlFor="tags">{t("problems.tagsComma")}</Label>
+										<Input
+											id="tags"
+											value={form.tags}
+											onChange={(e) =>
+												setForm({ ...form, tags: e.target.value })
+											}
+											placeholder="dp, greedy, graph"
+										/>
+									</div>
+								</div>
+								<div className="grid gap-2">
+									<Label htmlFor="statement">{t("problems.statement")}</Label>
+									<Textarea
+										id="statement"
+										rows={4}
+										value={form.statement}
+										onChange={(e) =>
+											setForm({ ...form, statement: e.target.value })
+										}
+										placeholder={t("problems.placeholderStatement")}
+									/>
+								</div>
+							</div>
+							<div className="flex justify-end gap-2">
+								<Button variant="outline" onClick={() => setDialogOpen(false)}>
+									{t("common.cancel")}
+								</Button>
+								<Button
+									onClick={() => createMutation.mutate()}
+									disabled={!form.title || createMutation.isPending}
+								>
+									{createMutation.isPending
+										? t("problems.adding")
+										: t("problems.add")}
+								</Button>
+							</div>
+						</DialogContent>
+					</Dialog>
+				</div>
 			</div>
 
 			{/* Search */}

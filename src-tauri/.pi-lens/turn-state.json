@@ -8,7 +8,7 @@
         }
       ],
       "importsChanged": false,
-      "lastEdit": "2026-05-25T03:48:42.485Z"
+      "lastEdit": "2026-05-25T16:38:38.240Z"
     },
     "src/db/mod.rs": {
       "modifiedRanges": [
@@ -18,7 +18,7 @@
         }
       ],
       "importsChanged": false,
-      "lastEdit": "2026-05-25T03:50:11.249Z"
+      "lastEdit": "2026-05-25T17:21:33.871Z"
     },
     "src/db/repo.rs": {
       "modifiedRanges": [
@@ -27,12 +27,16 @@
           "end": 780
         },
         {
+          "start": 809,
+          "end": 810
+        },
+        {
           "start": 822,
           "end": 862
         }
       ],
       "importsChanged": false,
-      "lastEdit": "2026-05-25T03:51:15.038Z"
+      "lastEdit": "2026-05-26T08:10:16.988Z"
     },
     "src/storage/mod.rs": {
       "modifiedRanges": [
@@ -48,25 +52,101 @@
       "modifiedRanges": [
         {
           "start": 1,
-          "end": 352
+          "end": 365
+        },
+        {
+          "start": 371,
+          "end": 371
+        },
+        {
+          "start": 375,
+          "end": 375
+        },
+        {
+          "start": 384,
+          "end": 385
+        },
+        {
+          "start": 387,
+          "end": 388
+        },
+        {
+          "start": 392,
+          "end": 395
         },
         {
           "start": 398,
           "end": 402
+        },
+        {
+          "start": 411,
+          "end": 411
+        },
+        {
+          "start": 416,
+          "end": 418
+        },
+        {
+          "start": 439,
+          "end": 440
+        },
+        {
+          "start": 442,
+          "end": 449
+        },
+        {
+          "start": 451,
+          "end": 468
         }
       ],
       "importsChanged": false,
-      "lastEdit": "2026-05-25T04:18:58.196Z"
+      "lastEdit": "2026-05-26T10:37:25.070Z"
     },
     "src/ai/mod.rs": {
       "modifiedRanges": [
         {
           "start": 1,
           "end": 281
+        },
+        {
+          "start": 471,
+          "end": 478
+        },
+        {
+          "start": 622,
+          "end": 622
+        },
+        {
+          "start": 629,
+          "end": 629
+        },
+        {
+          "start": 631,
+          "end": 631
+        },
+        {
+          "start": 638,
+          "end": 638
+        },
+        {
+          "start": 673,
+          "end": 673
+        },
+        {
+          "start": 707,
+          "end": 708
+        },
+        {
+          "start": 718,
+          "end": 719
+        },
+        {
+          "start": 757,
+          "end": 774
         }
       ],
       "importsChanged": false,
-      "lastEdit": "2026-05-25T04:15:25.673Z"
+      "lastEdit": "2026-05-25T12:27:52.142Z"
     },
     "src/lib.rs": {
       "modifiedRanges": [
@@ -75,8 +155,8 @@
           "end": 100
         }
       ],
-      "importsChanged": false,
-      "lastEdit": "2026-05-25T06:05:08.614Z"
+      "importsChanged": true,
+      "lastEdit": "2026-05-26T17:44:22.744Z"
     },
     "Cargo.toml": {
       "modifiedRanges": [
@@ -85,12 +165,12 @@
           "end": 19
         },
         {
-          "start": 52,
+          "start": 50,
           "end": 53
         }
       ],
-      "importsChanged": false,
-      "lastEdit": "2026-05-25T06:03:43.960Z"
+      "importsChanged": true,
+      "lastEdit": "2026-05-26T17:41:42.081Z"
     },
     "Cargo.lock": {
       "modifiedRanges": [
@@ -131,10 +211,66 @@
       ],
       "importsChanged": false,
       "lastEdit": "2026-05-25T05:56:22.648Z"
+    },
+    "src/vjudge.rs": {
+      "modifiedRanges": [
+        {
+          "start": 1,
+          "end": 831
+        },
+        {
+          "start": 850,
+          "end": 858
+        },
+        {
+          "start": 874,
+          "end": 883
+        },
+        {
+          "start": 889,
+          "end": 913
+        },
+        {
+          "start": 956,
+          "end": 956
+        },
+        {
+          "start": 964,
+          "end": 965
+        },
+        {
+          "start": 967,
+          "end": 967
+        },
+        {
+          "start": 972,
+          "end": 972
+        },
+        {
+          "start": 974,
+          "end": 974
+        },
+        {
+          "start": 1072,
+          "end": 1072
+        }
+      ],
+      "importsChanged": false,
+      "lastEdit": "2026-05-26T17:43:26.003Z"
+    },
+    "src/import_server.rs": {
+      "modifiedRanges": [
+        {
+          "start": 1,
+          "end": 658
+        }
+      ],
+      "importsChanged": false,
+      "lastEdit": "2026-05-26T17:51:52.290Z"
     }
   },
   "turnCycles": 0,
   "maxCycles": 3,
-  "lastUpdated": "2026-05-25T06:05:08.614Z",
-  "sessionId": "lens-mpkmhaha-2eb5fb9a"
+  "lastUpdated": "2026-05-26T17:51:52.290Z",
+  "sessionId": "lens-mpmwju2k-daa8c105"
 }

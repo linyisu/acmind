@@ -32,6 +32,33 @@ async fn run_migrations(pool: &SqlitePool) -> Result<(), sqlx::Error> {
         .execute(pool)
         .await?;
 
+    ensure_column(pool, "submissions", "external_run_id", "TEXT").await?;
+
+    sqlx::query(include_str!(
+        "../../migrations/003_external_submissions.sql"
+    ))
+    .execute(pool)
+    .await?;
+
+    Ok(())
+}
+
+async fn ensure_column(
+    pool: &SqlitePool,
+    table: &str,
+    column: &str,
+    definition: &str,
+) -> Result<(), sqlx::Error> {
+    let pragma = format!("PRAGMA table_info({})", table);
+    let rows: Vec<(i64, String, String, i64, Option<String>, i64)> =
+        sqlx::query_as(&pragma).fetch_all(pool).await?;
+
+    if rows.iter().any(|(_, name, _, _, _, _)| name == column) {
+        return Ok(());
+    }
+
+    let sql = format!("ALTER TABLE {} ADD COLUMN {} {}", table, column, definition);
+    sqlx::query(&sql).execute(pool).await?;
     Ok(())
 }
 

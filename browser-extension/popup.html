@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ACMind VJudge Importer</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      width: 280px;
+      padding: 16px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 13px;
+      color: #e0e0e0;
+      background: #1a1a2e;
+    }
+    h2 {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .status-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 0;
+      border-bottom: 1px solid #2a2a4a;
+      margin-bottom: 12px;
+    }
+    .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #666;
+      flex-shrink: 0;
+    }
+    .status-dot.connected { background: #4ade80; }
+    .status-dot.disconnected { background: #f87171; }
+    .status-text { font-size: 12px; color: #888; }
+    .hint {
+      font-size: 11px;
+      color: #666;
+      line-height: 1.5;
+      margin-bottom: 12px;
+    }
+    .hint code {
+      background: #2a2a4a;
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-size: 11px;
+    }
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 8px 12px;
+      margin: 4px 0;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      text-align: center;
+      transition: opacity 0.15s;
+    }
+    .btn:hover { opacity: 0.85; }
+    .btn-primary {
+      background: #6366f1;
+      color: #fff;
+    }
+    .btn-secondary {
+      background: #2a2a4a;
+      color: #a0a0b0;
+    }
+    .btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+  <h2>🧠 ACMind Importer</h2>
+
+  <div class="status-row">
+    <div class="status-dot" id="status-dot"></div>
+    <span class="status-text" id="status-label">Checking connection...</span>
+  </div>
+
+  <div class="hint">
+    Open <code>vjudge.net</code>, navigate to your status/problem/solution page,
+    and click the <strong>Import</strong> button ACMind adds to the page.
+    <br><br>
+    Make sure ACMind desktop app is running.
+  </div>
+
+  <button class="btn btn-primary" id="btn-check" disabled>
+    Re-check Connection
+  </button>
+
+  <button class="btn btn-secondary" id="btn-settings" style="margin-top: 8px;">
+    Open ACMind Settings
+  </button>
+
+  <script src="popup.js"></script>
+</body>
+</html>

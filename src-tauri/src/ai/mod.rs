@@ -1,3 +1,4 @@
+use crate::db::models::Problem;
 use crate::db::repo;
 use crate::error::AppError;
 use futures::StreamExt;
@@ -43,6 +44,138 @@ impl AiPromptLocale {
     }
 }
 
+async fn read_problem_statement(problem: &Problem) -> Option<String> {
+    let path = problem.statement_path.as_ref()?;
+    match tokio::fs::read_to_string(path).await {
+        Ok(content) => Some(content),
+        Err(err) => {
+            warn!(path = %path, error = %err, "Failed to read problem statement");
+            None
+        }
+    }
+}
+
+pub async fn format_problem_statement(
+    pool: &SqlitePool,
+    raw_text: &str,
+) -> Result<String, AppError> {
+    let provider = repo::get_setting(pool, "ai_provider")
+        .await?
+        .unwrap_or_else(|| "openai".into());
+    let api_key = repo::get_setting(pool, "ai_api_key")
+        .await?
+        .unwrap_or_default();
+    let model = repo::get_setting(pool, "ai_model")
+        .await?
+        .unwrap_or_else(|| "gpt-4o".into());
+    let base_url = repo::get_setting(pool, "ai_base_url")
+        .await?
+        .unwrap_or_default();
+    let prompt_locale = AiPromptLocale::from_setting(repo::get_setting(pool, "app_locale").await?);
+
+    if api_key.is_empty() {
+        return Err(AppError::InvalidInput(
+            "请先在设置 → AI 提供商中填写 API Key。".into(),
+        ));
+    }
+
+    let prompt = build_statement_format_prompt(raw_text, prompt_locale);
+    let response = match provider.as_str() {
+        "anthropic" => call_anthropic(&api_key, &model, &prompt, prompt_locale).await?,
+        "google" => call_gemini(&api_key, &model, &prompt).await?,
+        _ => call_openai_compatible(&api_key, &model, &base_url, &prompt, prompt_locale).await?,
+    };
+
+    let formatted = normalize_markdown_spacing(&extract_formatted_markdown(&response));
+    if formatted.is_empty() {
+        return Err(AppError::AiError("AI 整理后题面为空，请重试。".into()));
+    }
+
+    Ok(formatted)
+}
+
+fn build_statement_format_prompt(raw_text: &str, locale: AiPromptLocale) -> String {
+    match locale {
+        AiPromptLocale::Zh => format!(
+            "请把下面从 OJ 页面复制出来的混乱题面整理为可渲染的 Markdown。\n\n\
+            要求：\n\
+            1. 不要解题，不要补充原文没有的信息。\n\
+            2. 保留题意、输入、输出、样例、约束和备注。\n\
+            3. 修复粘连的数学公式，例如 n(2≤n≤12)n(2≤n≤12) 应整理为 $n$ ($2 \\le n \\le 12$)。\n\
+            4. 使用 Markdown 标题：## 题目描述、## 输入格式、## 输出格式、## 样例。\n\
+            5. 样例输入输出必须放入 ```text 代码块。\n\
+            6. 数学表达式使用 $...$，不要使用 HTML。\n\
+            7. 段落之间最多保留一个空行；不要在每行之间插入空行。\n\
+            8. 只返回整理后的 Markdown 纯文本，不要返回 JSON，不要返回解释。\n\n\
+            原始题面：\n{}",
+            raw_text.trim()
+        ),
+        AiPromptLocale::En => format!(
+            "Clean up the following messy competitive-programming statement into renderable Markdown.\n\n\
+            Requirements:\n\
+            1. Do not solve the problem or add information not present in the text.\n\
+            2. Preserve statement, input, output, samples, constraints, and notes.\n\
+            3. Repair duplicated/stuck formulas, e.g. n(2≤n≤12)n(2≤n≤12) should become $n$ ($2 \\le n \\le 12$).\n\
+            4. Use Markdown headings: ## Statement, ## Input, ## Output, ## Samples.\n\
+            5. Put sample input/output in ```text code fences.\n\
+            6. Use $...$ for math expressions, not HTML.\n\
+            7. Keep at most one blank line between paragraphs; do not insert blank lines between every line.\n\
+            8. Return only the cleaned Markdown plain text. Do not return JSON or explanation.\n\n\
+            Raw statement:\n{}",
+            raw_text.trim()
+        ),
+    }
+}
+
+fn strip_markdown_fence(response: &str) -> &str {
+    let trimmed = response.trim();
+    if let Some(rest) = trimmed.strip_prefix("```markdown") {
+        return rest.trim_end_matches("```");
+    }
+    if let Some(rest) = trimmed.strip_prefix("```") {
+        return rest.trim_end_matches("```");
+    }
+    trimmed
+}
+
+fn extract_formatted_markdown(response: &str) -> String {
+    let content = strip_markdown_fence(response).trim();
+    if let Ok(value) = serde_json::from_str::<serde_json::Value>(content) {
+        if let Some(markdown) = value.get("markdown").and_then(|item| item.as_str()) {
+            return markdown.to_string();
+        }
+    }
+
+    content.to_string()
+}
+
+fn normalize_markdown_spacing(markdown: &str) -> String {
+    let mut result = String::new();
+    let mut blank_lines = 0usize;
+    let mut in_fence = false;
+
+    for raw_line in markdown.trim().lines() {
+        let line = raw_line.trim_end();
+        if line.trim_start().starts_with("```") {
+            in_fence = !in_fence;
+        }
+
+        if !in_fence && line.trim().is_empty() {
+            blank_lines += 1;
+            if blank_lines > 1 {
+                continue;
+            }
+        } else {
+            blank_lines = 0;
+        }
+
+        result.push_str(line);
+        result.push('\n');
+    }
+
+    result.trim().to_string()
+}
+
 /// Analyze a problem's WA and AC codes against the statement and solutions.
 #[instrument(skip(pool), fields(problem_id = %problem_id))]
 pub async fn analyze_problem(
@@ -84,15 +217,24 @@ pub async fn analyze_problem(
     let submissions = repo::list_submissions_by_problem(pool, problem_id).await?;
     let notes = repo::list_notes_by_problem(pool, problem_id).await?;
 
+    let statement = read_problem_statement(&problem).await;
+
     info!(
         problem = %problem.title,
         submissions = submissions.len(),
         notes = notes.len(),
+        has_statement = statement.is_some(),
         "Loaded problem data"
     );
 
     // Build the analysis prompt
-    let prompt = build_analysis_prompt(&problem.title, &submissions, &notes, prompt_locale);
+    let prompt = build_analysis_prompt(
+        &problem.title,
+        statement.as_deref(),
+        &submissions,
+        &notes,
+        prompt_locale,
+    );
 
     // Call the AI API
     info!("Calling {} API with model {}", provider, model);
@@ -110,6 +252,7 @@ pub async fn analyze_problem(
 
 fn build_analysis_prompt(
     title: &str,
+    statement: Option<&str>,
     submissions: &[crate::db::models::Submission],
     notes: &[crate::db::models::SolutionNote],
     locale: AiPromptLocale,
@@ -128,6 +271,13 @@ fn build_analysis_prompt(
             title
         ),
     };
+
+    if let Some(statement) = statement.filter(|content| !content.trim().is_empty()) {
+        match locale {
+            AiPromptLocale::Zh => prompt.push_str(&format!("题面：\n{}\n\n", statement.trim())),
+            AiPromptLocale::En => prompt.push_str(&format!("Statement:\n{}\n\n", statement.trim())),
+        }
+    }
 
     for sub in submissions {
         match locale {
@@ -439,7 +589,14 @@ pub async fn analyze_problem_streaming(
     let submissions = repo::list_submissions_by_problem(pool, problem_id).await?;
     let notes = repo::list_notes_by_problem(pool, problem_id).await?;
 
-    let prompt = build_analysis_prompt(&problem.title, &submissions, &notes, prompt_locale);
+    let statement = read_problem_statement(&problem).await;
+    let prompt = build_analysis_prompt(
+        &problem.title,
+        statement.as_deref(),
+        &submissions,
+        &notes,
+        prompt_locale,
+    );
 
     let response = match provider.as_str() {
         "anthropic" => {
@@ -558,7 +715,8 @@ fn append_openai_stream_line(line: &str, full_text: &mut String, on_chunk: &impl
 #[cfg(test)]
 mod tests {
     use super::{
-        append_openai_stream_line, build_analysis_prompt, parse_analysis_response, AiPromptLocale,
+        append_openai_stream_line, build_analysis_prompt, extract_formatted_markdown,
+        normalize_markdown_spacing, parse_analysis_response, AiPromptLocale,
     };
 
     #[test]
@@ -590,7 +748,7 @@ mod tests {
 
     #[test]
     fn builds_chinese_analysis_prompt_by_default_locale() {
-        let prompt = build_analysis_prompt("两数之和", &[], &[], AiPromptLocale::Zh);
+        let prompt = build_analysis_prompt("两数之和", None, &[], &[], AiPromptLocale::Zh);
 
         assert!(prompt.contains("题目：两数之和"));
         assert!(prompt.contains("用中文详细说明错误根因"));
@@ -599,11 +757,29 @@ mod tests {
 
     #[test]
     fn builds_english_analysis_prompt_when_locale_is_en() {
-        let prompt = build_analysis_prompt("Two Sum", &[], &[], AiPromptLocale::En);
+        let prompt = build_analysis_prompt("Two Sum", None, &[], &[], AiPromptLocale::En);
 
         assert!(prompt.contains("Problem: Two Sum"));
         assert!(prompt.contains("root cause of the failure in English"));
         assert!(!prompt.contains("题目："));
+    }
+
+    #[test]
+    fn extracts_markdown_from_json_wrapper() {
+        let response = r###"{"markdown":"## 题目描述\n\n内容"}"###;
+
+        assert_eq!(extract_formatted_markdown(response), "## 题目描述\n\n内容");
+    }
+
+    #[test]
+    fn normalizes_excessive_markdown_blank_lines() {
+        let markdown = "## 题目描述\n\n\n内容\n\n\n\n```text\n1\n\n2\n```\n\n\n## 输出";
+        let normalized = normalize_markdown_spacing(markdown);
+
+        assert_eq!(
+            normalized,
+            "## 题目描述\n\n内容\n\n```text\n1\n\n2\n```\n\n## 输出"
+        );
     }
 
     #[test]

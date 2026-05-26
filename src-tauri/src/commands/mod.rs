@@ -63,6 +63,19 @@ pub async fn create_problem(
 }
 
 #[tauri::command(rename_all = "camelCase")]
+pub async fn get_problem_statement(
+    pool: State<'_, SqlitePool>,
+    storage: State<'_, Storage>,
+    id: String,
+) -> Result<Option<String>, AppError> {
+    let problem = repo::get_problem(&pool, &id).await?;
+    match problem.statement_path {
+        Some(path) => Ok(Some(storage.read_file(&path)?)),
+        None => Ok(None),
+    }
+}
+
+#[tauri::command(rename_all = "camelCase")]
 pub async fn update_problem(
     pool: State<'_, SqlitePool>,
     storage: State<'_, Storage>,
@@ -87,6 +100,14 @@ pub async fn delete_problem(
     repo::delete_problem(&pool, &id).await?;
     storage.delete_problem_dir(&id).ok();
     Ok(())
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub async fn format_problem_statement(
+    pool: State<'_, SqlitePool>,
+    raw_text: String,
+) -> Result<String, AppError> {
+    crate::ai::format_problem_statement(&pool, &raw_text).await
 }
 
 // -- Submissions --
@@ -183,7 +204,9 @@ pub async fn create_note(
     pool: State<'_, SqlitePool>,
     input: CreateNoteInput,
 ) -> Result<SolutionNote, AppError> {
-    Ok(repo::create_note(&pool, &input).await?)
+    let note = repo::create_note(&pool, &input).await?;
+    repo::delete_notes_by_problem_except(&pool, &note.problem_id, &note.id).await?;
+    Ok(note)
 }
 
 #[tauri::command(rename_all = "camelCase")]
@@ -306,42 +329,7 @@ pub async fn analyze_problem(
 ) -> Result<crate::ai::AnalysisResult, AppError> {
     info!("analyze_problem command called for problem {}", problem_id);
     let analysis = crate::ai::analyze_problem(&pool, &problem_id).await?;
-
-    // Save error analysis to DB (attach to first WA submission)
-    let submissions = repo::list_submissions_by_problem(&pool, &problem_id).await?;
-    if let Some(wa_sub) = submissions.iter().find(|s| s.status == "WA") {
-        let error_input = crate::db::models::CreateErrorInput {
-            problem_id: problem_id.clone(),
-            submission_id: wa_sub.id.clone(),
-            error_type: analysis.error_type.clone(),
-            root_cause: analysis.root_cause.clone(),
-            fix_summary: analysis.fix_summary.clone(),
-            related_knowledge: analysis.knowledge_points.clone(),
-        };
-        repo::create_error_analysis(&pool, &error_input).await?;
-    }
-
-    // Save suggestions as an AI note
-    let note_content = format!(
-        "# AI Analysis\n\n## Root Cause\n{}\n\n## Fix\n{}\n\n## Suggestions\n{}",
-        analysis.root_cause,
-        analysis.fix_summary,
-        analysis
-            .suggestions
-            .iter()
-            .map(|s| format!("- {}", s))
-            .collect::<Vec<_>>()
-            .join("\n")
-    );
-
-    let note_input = crate::db::models::CreateNoteInput {
-        problem_id,
-        note_type: "ai".into(),
-        content: note_content,
-        source_url: None,
-    };
-    repo::create_note(&pool, &note_input).await?;
-
+    save_analysis_as_single_note(&pool, &problem_id, &analysis).await?;
     Ok(analysis)
 }
 
@@ -359,23 +347,32 @@ pub async fn analyze_problem_streaming(
 
     // Parse the full response into AnalysisResult
     let analysis = crate::ai::parse_analysis_response(&full_response)?;
+    save_analysis_as_single_note(&pool, &pid, &analysis).await?;
+    Ok(analysis)
+}
 
-    // Save to DB (same as analyze_problem)
-    let submissions = repo::list_submissions_by_problem(&pool, &pid).await?;
+async fn save_analysis_as_single_note(
+    pool: &SqlitePool,
+    problem_id: &str,
+    analysis: &crate::ai::AnalysisResult,
+) -> Result<(), AppError> {
+    repo::delete_error_analyses_by_problem(pool, problem_id).await?;
+
+    let submissions = repo::list_submissions_by_problem(pool, problem_id).await?;
     if let Some(wa_sub) = submissions.iter().find(|s| s.status == "WA") {
         let error_input = crate::db::models::CreateErrorInput {
-            problem_id: pid.clone(),
+            problem_id: problem_id.to_string(),
             submission_id: wa_sub.id.clone(),
             error_type: analysis.error_type.clone(),
             root_cause: analysis.root_cause.clone(),
             fix_summary: analysis.fix_summary.clone(),
             related_knowledge: analysis.knowledge_points.clone(),
         };
-        repo::create_error_analysis(&pool, &error_input).await?;
+        repo::create_error_analysis(pool, &error_input).await?;
     }
 
     let note_content = format!(
-        "# AI Analysis\n\n## Root Cause\n{}\n\n## Fix\n{}\n\n## Suggestions\n{}",
+        "# AI 分析\n\n## 错误根因\n{}\n\n## 修复方式\n{}\n\n## 改进建议\n{}",
         analysis.root_cause,
         analysis.fix_summary,
         analysis
@@ -387,14 +384,14 @@ pub async fn analyze_problem_streaming(
     );
 
     let note_input = crate::db::models::CreateNoteInput {
-        problem_id: pid,
+        problem_id: problem_id.to_string(),
         note_type: "ai".into(),
         content: note_content,
         source_url: None,
     };
-    repo::create_note(&pool, &note_input).await?;
-
-    Ok(analysis)
+    let note = repo::create_note(pool, &note_input).await?;
+    repo::delete_notes_by_problem_except(pool, problem_id, &note.id).await?;
+    Ok(())
 }
 
 // -- Dashboard --
@@ -437,6 +434,32 @@ pub async fn get_all_settings(
     pool: State<'_, SqlitePool>,
 ) -> Result<Vec<repo::AppSetting>, AppError> {
     Ok(repo::get_all_settings(&pool).await?)
+}
+
+// -- VJudge --
+
+#[tauri::command(rename_all = "camelCase")]
+pub async fn sync_vjudge_submissions(
+    pool: State<'_, SqlitePool>,
+    storage: State<'_, Storage>,
+    username: String,
+) -> Result<crate::vjudge::VJudgeSyncSummary, AppError> {
+    crate::vjudge::sync_public_submissions(&pool, &storage, &username).await
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub async fn import_vjudge_problem(
+    pool: State<'_, SqlitePool>,
+    storage: State<'_, Storage>,
+    url: String,
+) -> Result<crate::vjudge::VJudgeProblemImportResult, AppError> {
+    match crate::vjudge::import_problem_from_url(&pool, &storage, &url).await {
+        Ok(result) => Ok(result),
+        Err(err) => {
+            tracing::error!(target: "app_lib::vjudge", "VJudge 单题导入失败: {}", err);
+            Err(err)
+        }
+    }
 }
 
 #[tauri::command(rename_all = "camelCase")]

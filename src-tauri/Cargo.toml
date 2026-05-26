@@ -47,6 +47,9 @@ futures = "0.3"
 thiserror = "2"
 anyhow = "1"
 
+# Local HTTP server for browser extension import
+tiny_http = "0.12"
+
 # Tracing / logging
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }

@@ -2,7 +2,9 @@ mod ai;
 mod commands;
 mod db;
 mod error;
+mod import_server;
 mod storage;
+mod vjudge;
 
 use db::init_db;
 use std::path::PathBuf;
@@ -55,9 +57,12 @@ pub fn run() {
                 .expect("Failed to initialize database");
             tracing::info!("Database initialized");
 
-            app.manage(pool);
+            let storage = Storage::new(app_data_dir.clone());
 
-            let storage = Storage::new(app_data_dir);
+            // Start the import server for browser extension communication
+            let _import_handle = import_server::start_import_server(pool.clone(), storage.clone());
+
+            app.manage(pool);
             app.manage(storage);
 
             Ok(())
@@ -66,6 +71,7 @@ pub fn run() {
             commands::list_problems,
             commands::get_problem,
             commands::create_problem,
+            commands::get_problem_statement,
             commands::update_problem,
             commands::delete_problem,
             commands::list_submissions_by_problem,
@@ -84,11 +90,14 @@ pub fn run() {
             commands::generate_report,
             commands::analyze_problem,
             commands::analyze_problem_streaming,
+            commands::format_problem_statement,
             commands::get_dashboard_stats,
             commands::get_error_type_stats,
             commands::get_setting,
             commands::set_setting,
             commands::get_all_settings,
+            commands::sync_vjudge_submissions,
+            commands::import_vjudge_problem,
             commands::get_log_path,
         ])
         .run(tauri::generate_context!())

@@ -114,7 +114,7 @@ pub async fn create_submission(
     let id = new_id();
 
     sqlx::query(
-        "INSERT INTO submissions (id, problem_id, status, language, code_path, runtime, memory, note) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+        "INSERT INTO submissions (id, problem_id, status, language, code_path, runtime, memory, note, external_run_id, submitted_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, COALESCE(?10, datetime('now')))",
     )
     .bind(&id)
     .bind(&input.problem_id)
@@ -124,6 +124,8 @@ pub async fn create_submission(
     .bind(input.runtime)
     .bind(input.memory)
     .bind(&input.note)
+    .bind(&input.external_run_id)
+    .bind(input.submitted_at)
     .execute(pool)
     .await?;
 
@@ -136,6 +138,43 @@ pub async fn delete_submission(pool: &SqlitePool, id: &str) -> Result<(), sqlx::
         .execute(pool)
         .await?;
     Ok(())
+}
+
+pub async fn set_submission_code_path(
+    pool: &SqlitePool,
+    id: &str,
+    code_path: &str,
+) -> Result<(), sqlx::Error> {
+    sqlx::query("UPDATE submissions SET code_path = ?1 WHERE id = ?2")
+        .bind(code_path)
+        .bind(id)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+pub async fn find_problem_by_source_id(
+    pool: &SqlitePool,
+    source: &str,
+    source_problem_id: &str,
+) -> Result<Option<Problem>, sqlx::Error> {
+    sqlx::query_as::<_, Problem>(
+        "SELECT * FROM problems WHERE source = ?1 AND source_problem_id = ?2 LIMIT 1",
+    )
+    .bind(source)
+    .bind(source_problem_id)
+    .fetch_optional(pool)
+    .await
+}
+
+pub async fn submission_by_external_run_id(
+    pool: &SqlitePool,
+    external_run_id: &str,
+) -> Result<Option<Submission>, sqlx::Error> {
+    sqlx::query_as::<_, Submission>("SELECT * FROM submissions WHERE external_run_id = ?1 LIMIT 1")
+        .bind(external_run_id)
+        .fetch_optional(pool)
+        .await
 }
 
 // -- Solution Notes --
@@ -200,6 +239,19 @@ pub async fn delete_note(pool: &SqlitePool, id: &str) -> Result<(), sqlx::Error>
     Ok(())
 }
 
+pub async fn delete_notes_by_problem_except(
+    pool: &SqlitePool,
+    problem_id: &str,
+    keep_id: &str,
+) -> Result<(), sqlx::Error> {
+    sqlx::query("DELETE FROM solution_notes WHERE problem_id = ?1 AND id != ?2")
+        .bind(problem_id)
+        .bind(keep_id)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
 // -- Error Analyses --
 
 pub async fn list_error_analyses_by_problem(
@@ -238,6 +290,17 @@ pub async fn create_error_analysis(
         .bind(&id)
         .fetch_one(pool)
         .await
+}
+
+pub async fn delete_error_analyses_by_problem(
+    pool: &SqlitePool,
+    problem_id: &str,
+) -> Result<(), sqlx::Error> {
+    sqlx::query("DELETE FROM error_analyses WHERE problem_id = ?1")
+        .bind(problem_id)
+        .execute(pool)
+        .await?;
+    Ok(())
 }
 
 // -- Knowledge Points --
@@ -317,22 +380,36 @@ pub struct DashboardStats {
 }
 
 pub async fn get_dashboard_stats(pool: &SqlitePool) -> Result<DashboardStats, sqlx::Error> {
-    let total_problems: (i64,) =
-        sqlx::query_as("SELECT COUNT(*) FROM problems")
-            .fetch_one(pool)
+    let total_problems: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM problems")
+        .fetch_one(pool)
+        .await?;
+
+    let status_counts: Vec<(String, i64)> =
+        sqlx::query_as("SELECT status, COUNT(*) as cnt FROM submissions GROUP BY status")
+            .fetch_all(pool)
             .await?;
 
-    let status_counts: Vec<(String, i64)> = sqlx::query_as(
-        "SELECT status, COUNT(*) as cnt FROM submissions GROUP BY status",
-    )
-    .fetch_all(pool)
-    .await?;
-
     let total_submissions: i64 = status_counts.iter().map(|(_, c)| c).sum();
-    let ac_count = status_counts.iter().find(|(s, _)| s == "AC").map(|(_, c)| *c).unwrap_or(0);
-    let wa_count = status_counts.iter().find(|(s, _)| s == "WA").map(|(_, c)| *c).unwrap_or(0);
-    let tle_count = status_counts.iter().find(|(s, _)| s == "TLE").map(|(_, c)| *c).unwrap_or(0);
-    let re_count = status_counts.iter().find(|(s, _)| s == "RE").map(|(_, c)| *c).unwrap_or(0);
+    let ac_count = status_counts
+        .iter()
+        .find(|(s, _)| s == "AC")
+        .map(|(_, c)| *c)
+        .unwrap_or(0);
+    let wa_count = status_counts
+        .iter()
+        .find(|(s, _)| s == "WA")
+        .map(|(_, c)| *c)
+        .unwrap_or(0);
+    let tle_count = status_counts
+        .iter()
+        .find(|(s, _)| s == "TLE")
+        .map(|(_, c)| *c)
+        .unwrap_or(0);
+    let re_count = status_counts
+        .iter()
+        .find(|(s, _)| s == "RE")
+        .map(|(_, c)| *c)
+        .unwrap_or(0);
     let other_count = total_submissions - ac_count - wa_count - tle_count - re_count;
 
     Ok(DashboardStats {
@@ -417,6 +494,18 @@ mod tests {
             .await
             .expect("failed to init settings schema");
 
+        sqlx::query("ALTER TABLE submissions ADD COLUMN external_run_id TEXT")
+            .execute(&pool)
+            .await
+            .expect("failed to init external submissions column");
+
+        sqlx::query(include_str!(
+            "../../migrations/003_external_submissions.sql"
+        ))
+        .execute(&pool)
+        .await
+        .expect("failed to init external submissions schema");
+
         pool
     }
 
@@ -443,7 +532,10 @@ mod tests {
         assert_eq!(problem.title, "Two Sum");
         assert_eq!(problem.source, "TestOJ");
         assert_eq!(problem.difficulty, Some(1500));
-        assert_eq!(problem.tags, serde_json::to_string(&["array", "hash"]).unwrap());
+        assert_eq!(
+            problem.tags,
+            serde_json::to_string(&["array", "hash"]).unwrap()
+        );
         assert!(!problem.id.is_empty());
     }
 
@@ -517,9 +609,13 @@ mod tests {
             runtime: Some(200),
             memory: Some(32000),
             note: Some("forgot modulo".into()),
+            external_run_id: None,
+            submitted_at: None,
         };
 
-        let sub = create_submission(&pool, &input, "/tmp/test.rs").await.unwrap();
+        let sub = create_submission(&pool, &input, "/tmp/test.rs")
+            .await
+            .unwrap();
         assert_eq!(sub.status, "WA");
         assert_eq!(sub.language, "Rust");
         assert_eq!(sub.code_path, "/tmp/test.rs");
@@ -540,8 +636,12 @@ mod tests {
                 runtime: None,
                 memory: None,
                 note: None,
+                external_run_id: None,
+                submitted_at: None,
             };
-            create_submission(&pool, &input, &format!("/tmp/{}.cpp", i)).await.unwrap();
+            create_submission(&pool, &input, &format!("/tmp/{}.cpp", i))
+                .await
+                .unwrap();
         }
 
         let subs = list_submissions_by_problem(&pool, &p.id).await.unwrap();
@@ -561,8 +661,12 @@ mod tests {
             runtime: None,
             memory: None,
             note: None,
+            external_run_id: None,
+            submitted_at: None,
         };
-        let sub = create_submission(&pool, &input, "/tmp/x.cpp").await.unwrap();
+        let sub = create_submission(&pool, &input, "/tmp/x.cpp")
+            .await
+            .unwrap();
 
         delete_submission(&pool, &sub.id).await.unwrap();
         let result = get_submission(&pool, &sub.id).await;
@@ -603,7 +707,9 @@ mod tests {
         };
         let note = create_note(&pool, &input).await.unwrap();
 
-        let updated = update_note(&pool, &note.id, "updated content").await.unwrap();
+        let updated = update_note(&pool, &note.id, "updated content")
+            .await
+            .unwrap();
         assert_eq!(updated.content, "updated content");
     }
 
@@ -623,8 +729,12 @@ mod tests {
             runtime: None,
             memory: None,
             note: None,
+            external_run_id: None,
+            submitted_at: None,
         };
-        let sub = create_submission(&pool, &sub_input, "/tmp/wa.cpp").await.unwrap();
+        let sub = create_submission(&pool, &sub_input, "/tmp/wa.cpp")
+            .await
+            .unwrap();
 
         let input = CreateErrorInput {
             problem_id: p.id.clone(),
@@ -637,7 +747,10 @@ mod tests {
 
         let err = create_error_analysis(&pool, &input).await.unwrap();
         assert_eq!(err.error_type, "OffByOne");
-        assert_eq!(err.related_knowledge, serde_json::to_string(&["DP"]).unwrap());
+        assert_eq!(
+            err.related_knowledge,
+            serde_json::to_string(&["DP"]).unwrap()
+        );
 
         let errors = list_error_analyses_by_problem(&pool, &p.id).await.unwrap();
         assert_eq!(errors.len(), 1);
@@ -665,7 +778,11 @@ mod tests {
         // Seed knowledge points are already inserted by the migration
         let points = list_knowledge_points(&pool).await.unwrap();
         // Should have the 9 seeded categories
-        assert!(points.len() >= 9, "expected at least 9 seed points, got {}", points.len());
+        assert!(
+            points.len() >= 9,
+            "expected at least 9 seed points, got {}",
+            points.len()
+        );
     }
 
     // -- Reports --
@@ -680,7 +797,9 @@ mod tests {
             end_date: "2025-01-07".into(),
         };
 
-        let report = save_report(&pool, &input, "# Week 1\nContent").await.unwrap();
+        let report = save_report(&pool, &input, "# Week 1\nContent")
+            .await
+            .unwrap();
         assert_eq!(report.title, "Week 1 Report");
         assert_eq!(report.content, "# Week 1\nContent");
 
@@ -713,6 +832,8 @@ mod tests {
                 runtime: None,
                 memory: None,
                 note: None,
+                external_run_id: None,
+                submitted_at: None,
             };
             create_submission(&pool, &input, &format!("/tmp/{}.cpp", status))
                 .await
@@ -743,8 +864,12 @@ mod tests {
                 runtime: None,
                 memory: None,
                 note: None,
+                external_run_id: None,
+                submitted_at: None,
             };
-            create_submission(&pool, &input, "/tmp/x.cpp").await.unwrap()
+            create_submission(&pool, &input, "/tmp/x.cpp")
+                .await
+                .unwrap()
         };
 
         for error_type in ["OffByOne", "Logic", "OffByOne", "Overflow"] {
@@ -797,8 +922,12 @@ mod tests {
             runtime: None,
             memory: None,
             note: None,
+            external_run_id: None,
+            submitted_at: None,
         };
-        let sub = create_submission(&pool, &sub_input, "/tmp/x.cpp").await.unwrap();
+        let sub = create_submission(&pool, &sub_input, "/tmp/x.cpp")
+            .await
+            .unwrap();
 
         let err_input = CreateErrorInput {
             problem_id: p.id.clone(),
@@ -839,7 +968,9 @@ mod tests {
     #[tokio::test]
     async fn test_set_and_get_setting() {
         let pool = test_pool().await;
-        set_setting(&pool, "ai_provider", "anthropic").await.unwrap();
+        set_setting(&pool, "ai_provider", "anthropic")
+            .await
+            .unwrap();
         let val = get_setting(&pool, "ai_provider").await.unwrap();
         assert_eq!(val, Some("anthropic".into()));
     }
@@ -856,7 +987,9 @@ mod tests {
     #[tokio::test]
     async fn test_set_setting_new_key() {
         let pool = test_pool().await;
-        set_setting(&pool, "custom_key", "custom_value").await.unwrap();
+        set_setting(&pool, "custom_key", "custom_value")
+            .await
+            .unwrap();
         let val = get_setting(&pool, "custom_key").await.unwrap();
         assert_eq!(val, Some("custom_value".into()));
     }

@@ -7,9 +7,9 @@ import {
 	Trash2,
 	Code,
 	FileText,
-	Brain,
 	Sparkles,
 	Loader2,
+	Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -35,12 +35,11 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { useState } from "react";
-import type {
-	Problem,
-	Submission,
-	SolutionNote,
-	ErrorAnalysis,
-} from "@/lib/types";
+import ReactMarkdown from "react-markdown";
+import rehypeKatex from "rehype-katex";
+import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
+import type { Problem, Submission, SolutionNote } from "@/lib/types";
 
 // API helpers
 async function api<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
@@ -59,6 +58,31 @@ const statusColors: Record<
 	CE: "secondary",
 };
 
+function markdownComponents() {
+	return {
+		pre: ({ children }: { children?: React.ReactNode }) => (
+			<pre className="overflow-x-auto rounded-lg bg-muted p-3 text-sm">
+				{children}
+			</pre>
+		),
+		code: ({ children }: { children?: React.ReactNode }) => (
+			<code className="rounded bg-muted px-1 py-0.5 font-mono text-sm">
+				{children}
+			</code>
+		),
+		a: ({ href, children }: { href?: string; children?: React.ReactNode }) => (
+			<a
+				href={href}
+				target="_blank"
+				rel="noopener noreferrer"
+				className="text-primary hover:underline"
+			>
+				{children}
+			</a>
+		),
+	};
+}
+
 export function ProblemDetailPage() {
 	const { id } = useParams<{ id: string }>();
 	const navigate = useNavigate();
@@ -68,6 +92,12 @@ export function ProblemDetailPage() {
 		queryKey: ["problem", id],
 		queryFn: () => api<Problem>("get_problem", { id }),
 		enabled: !!id,
+	});
+
+	const { data: statement } = useQuery({
+		queryKey: ["problem-statement", id, problem?.statement_path],
+		queryFn: () => api<string | null>("get_problem_statement", { id }),
+		enabled: !!id && !!problem,
 	});
 
 	const { data: submissions } = useQuery({
@@ -84,11 +114,20 @@ export function ProblemDetailPage() {
 		enabled: !!id,
 	});
 
-	const { data: errors } = useQuery({
-		queryKey: ["errors", id],
+	const currentNote = notes?.[0];
+
+	// Code viewer state
+	const [codeViewerOpen, setCodeViewerOpen] = useState(false);
+	const [codeViewerSubId, setCodeViewerSubId] = useState<string | null>(null);
+
+	const { data: viewedSubmission, isFetching: codeLoading } = useQuery({
+		queryKey: ["submission-code", codeViewerSubId],
 		queryFn: () =>
-			api<ErrorAnalysis[]>("list_error_analyses_by_problem", { problemId: id }),
-		enabled: !!id,
+			api<{ code_text?: string; language: string; status: string }>(
+				"get_submission",
+				{ id: codeViewerSubId },
+			),
+		enabled: !!codeViewerSubId && codeViewerOpen,
 	});
 
 	// Add submission dialog
@@ -145,8 +184,11 @@ export function ProblemDetailPage() {
 		content: "",
 		source_url: "",
 	});
+	const [statementDialogOpen, setStatementDialogOpen] = useState(false);
+	const [statementDraft, setStatementDraft] = useState("");
 
 	const [analyzing, setAnalyzing] = useState(false);
+	const [formatError, setFormatError] = useState("");
 	const [analysisError, setAnalysisError] = useState("");
 	const [analysisStream, setAnalysisStream] = useState("");
 
@@ -185,20 +227,65 @@ export function ProblemDetailPage() {
 		},
 	});
 
-	const createNote = useMutation({
+	const saveNote = useMutation({
 		mutationFn: () =>
-			api("create_note", {
-				input: {
-					problem_id: id,
-					note_type: noteForm.note_type,
-					content: noteForm.content,
-					source_url: noteForm.source_url || undefined,
-				},
-			}),
+			currentNote
+				? api("update_note", {
+						id: currentNote.id,
+						content: noteForm.content,
+					})
+				: api("create_note", {
+						input: {
+							problem_id: id,
+							note_type: "self",
+							content: noteForm.content,
+							source_url: undefined,
+						},
+					}),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["notes", id] });
 			setNoteDialogOpen(false);
 			setNoteForm({ note_type: "self", content: "", source_url: "" });
+		},
+	});
+
+	const deleteNote = useMutation({
+		mutationFn: (noteId: string) => api("delete_note", { id: noteId }),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["notes", id] });
+		},
+	});
+
+	const updateStatement = useMutation({
+		mutationFn: () =>
+			api("update_problem", {
+				id,
+				input: {
+					statement: statementDraft,
+				},
+			}),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["problem", id] });
+			queryClient.invalidateQueries({ queryKey: ["problem-statement", id] });
+			setStatementDialogOpen(false);
+		},
+	});
+
+	const formatStatement = useMutation({
+		mutationFn: () =>
+			api<string>("format_problem_statement", {
+				rawText: statementDraft,
+			}),
+		onMutate: () => setFormatError(""),
+		onSuccess: (formatted) => setStatementDraft(formatted),
+		onError: (err) => {
+			setFormatError(
+				typeof err === "string"
+					? err
+					: err instanceof Error
+						? err.message
+						: "整理题面失败",
+			);
 		},
 	});
 
@@ -349,66 +436,72 @@ export function ProblemDetailPage() {
 
 					<Dialog open={noteDialogOpen} onOpenChange={setNoteDialogOpen}>
 						<DialogTrigger asChild>
-							<Button variant="outline" size="sm">
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={() =>
+									setNoteForm({
+										note_type: currentNote?.note_type ?? "self",
+										content: currentNote?.content ?? "",
+										source_url: currentNote?.source_url ?? "",
+									})
+								}
+							>
 								<FileText className="mr-2 h-4 w-4" />
-								Add Note
+								{currentNote ? "编辑笔记" : "添加笔记"}
 							</Button>
 						</DialogTrigger>
-						<DialogContent className="sm:max-w-lg">
+						<DialogContent className="sm:max-w-3xl">
 							<DialogHeader>
-								<DialogTitle>Add Note</DialogTitle>
+								<DialogTitle>
+									{currentNote ? "编辑笔记" : "添加笔记"}
+								</DialogTitle>
 							</DialogHeader>
 							<div className="grid gap-4 py-4">
 								<div className="grid gap-2">
-									<Label>Type</Label>
-									<select
-										className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-										value={noteForm.note_type}
-										onChange={(e) =>
-											setNoteForm({ ...noteForm, note_type: e.target.value })
-										}
-									>
-										<option value="self">Self Review</option>
-										<option value="official">Official Solution</option>
-										<option value="community">Community Solution</option>
-										<option value="ai">AI Analysis</option>
-									</select>
-								</div>
-								<div className="grid gap-2">
-									<Label>Content (Markdown)</Label>
+									<Label>笔记内容（Markdown）</Label>
 									<Textarea
-										rows={6}
+										rows={14}
+										className="font-mono text-sm"
 										value={noteForm.content}
 										onChange={(e) =>
 											setNoteForm({ ...noteForm, content: e.target.value })
 										}
-										placeholder="Write your notes in Markdown..."
-									/>
-								</div>
-								<div className="grid gap-2">
-									<Label>Source URL</Label>
-									<Input
-										value={noteForm.source_url}
-										onChange={(e) =>
-											setNoteForm({ ...noteForm, source_url: e.target.value })
-										}
-										placeholder="https://..."
+										placeholder="记录这道题的思路、坑点、复盘。支持 Markdown 和 LaTeX。"
 									/>
 								</div>
 							</div>
-							<div className="flex justify-end gap-2">
-								<Button
-									variant="outline"
-									onClick={() => setNoteDialogOpen(false)}
-								>
-									Cancel
-								</Button>
-								<Button
-									onClick={() => createNote.mutate()}
-									disabled={!noteForm.content || createNote.isPending}
-								>
-									Save
-								</Button>
+							<div className="flex justify-between gap-2">
+								<div>
+									{currentNote && (
+										<Button
+											variant="destructive"
+											onClick={() => {
+												if (confirm("确定删除这条笔记吗？")) {
+													deleteNote.mutate(currentNote.id);
+													setNoteDialogOpen(false);
+												}
+											}}
+											disabled={deleteNote.isPending}
+										>
+											删除笔记
+										</Button>
+									)}
+								</div>
+								<div className="flex gap-2">
+									<Button
+										variant="outline"
+										onClick={() => setNoteDialogOpen(false)}
+									>
+										取消
+									</Button>
+									<Button
+										onClick={() => saveNote.mutate()}
+										disabled={!noteForm.content.trim() || saveNote.isPending}
+									>
+										保存笔记
+									</Button>
+								</div>
 							</div>
 						</DialogContent>
 					</Dialog>
@@ -424,19 +517,106 @@ export function ProblemDetailPage() {
 				))}
 			</div>
 
+			<Card>
+				<CardHeader className="flex flex-row items-center justify-between gap-4">
+					<CardTitle className="text-base">题面</CardTitle>
+					<Button
+						variant="outline"
+						size="sm"
+						onClick={() => {
+							setStatementDraft(statement ?? "");
+							setStatementDialogOpen(true);
+						}}
+					>
+						<FileText className="mr-2 h-4 w-4" />
+						{statement ? "编辑题面" : "导入题面"}
+					</Button>
+				</CardHeader>
+				<CardContent>
+					{statement ? (
+						<div className="prose prose-sm max-w-none dark:prose-invert">
+							<ReactMarkdown
+								remarkPlugins={[remarkGfm, remarkMath]}
+								rehypePlugins={[rehypeKatex]}
+								components={markdownComponents()}
+							>
+								{statement}
+							</ReactMarkdown>
+						</div>
+					) : (
+						<p className="text-sm text-muted-foreground">
+							还没有题面。可以从 Firefox 扩展复制 Markdown 后导入。
+						</p>
+					)}
+				</CardContent>
+			</Card>
+
+			<Dialog open={statementDialogOpen} onOpenChange={setStatementDialogOpen}>
+				<DialogContent className="sm:max-w-3xl">
+					<DialogHeader>
+						<DialogTitle>导入题面</DialogTitle>
+					</DialogHeader>
+					<div className="grid gap-3 py-4">
+						<div className="flex items-center justify-between gap-3">
+							<Label>Markdown 题面</Label>
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={() => formatStatement.mutate()}
+								disabled={!statementDraft.trim() || formatStatement.isPending}
+							>
+								{formatStatement.isPending ? (
+									<>
+										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+										AI 整理中...
+									</>
+								) : (
+									<>
+										<Sparkles className="mr-2 h-4 w-4" />
+										AI 整理
+									</>
+								)}
+							</Button>
+						</div>
+						{formatError && (
+							<p className="rounded-md bg-destructive/10 p-2 text-sm text-destructive">
+								{formatError}
+							</p>
+						)}
+						<Textarea
+							rows={18}
+							className="font-mono text-sm"
+							value={statementDraft}
+							onChange={(event) => setStatementDraft(event.target.value)}
+							placeholder="把 ACMind Firefox 扩展复制的 Markdown 粘贴到这里..."
+						/>
+					</div>
+					<div className="flex justify-end gap-2">
+						<Button
+							variant="outline"
+							onClick={() => setStatementDialogOpen(false)}
+						>
+							取消
+						</Button>
+						<Button
+							onClick={() => updateStatement.mutate()}
+							disabled={!statementDraft.trim() || updateStatement.isPending}
+						>
+							保存题面
+						</Button>
+					</div>
+				</DialogContent>
+			</Dialog>
+
 			<Tabs defaultValue="submissions">
 				<TabsList>
 					<TabsTrigger value="submissions">
 						<Code className="mr-2 h-4 w-4" />
-						Submissions ({submissions?.length ?? 0})
+						提交记录 ({submissions?.length ?? 0})
 					</TabsTrigger>
 					<TabsTrigger value="notes">
 						<FileText className="mr-2 h-4 w-4" />
-						Notes ({notes?.length ?? 0})
-					</TabsTrigger>
-					<TabsTrigger value="errors">
-						<Brain className="mr-2 h-4 w-4" />
-						Error Analysis ({errors?.length ?? 0})
+						笔记 ({currentNote ? 1 : 0})
 					</TabsTrigger>
 				</TabsList>
 
@@ -477,16 +657,28 @@ export function ProblemDetailPage() {
 											{new Date(sub.submitted_at).toLocaleDateString()}
 										</TableCell>
 										<TableCell>
-											<button
-												onClick={() => {
-													if (confirm("Delete this submission?")) {
-														deleteSub.mutate(sub.id);
-													}
-												}}
-												className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-destructive/10 text-destructive"
-											>
-												<Trash2 className="h-4 w-4" />
-											</button>
+											<div className="flex items-center gap-1">
+												<button
+													onClick={() => {
+														setCodeViewerSubId(sub.id);
+														setCodeViewerOpen(true);
+													}}
+													className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted"
+													title="查看代码"
+												>
+													<Eye className="h-4 w-4" />
+												</button>
+												<button
+													onClick={() => {
+														if (confirm("Delete this submission?")) {
+															deleteSub.mutate(sub.id);
+														}
+													}}
+													className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-destructive/10 text-destructive"
+												>
+													<Trash2 className="h-4 w-4" />
+												</button>
+											</div>
 										</TableCell>
 									</TableRow>
 								))}
@@ -554,88 +746,104 @@ export function ProblemDetailPage() {
 
 				{/* Notes tab */}
 				<TabsContent value="notes" className="space-y-4">
-					{notes && notes.length > 0 ? (
-						notes.map((note) => (
-							<Card key={note.id}>
-								<CardHeader>
-									<CardTitle className="text-sm flex items-center gap-2">
-										<Badge variant="outline">{note.note_type}</Badge>
-										<span className="text-muted-foreground font-normal">
-											{new Date(note.created_at).toLocaleDateString()}
-										</span>
-									</CardTitle>
-								</CardHeader>
-								<CardContent>
-									<div className="prose prose-sm max-w-none dark:prose-invert">
-										{note.content}
-									</div>
-									{note.source_url && (
-										<a
-											href={note.source_url}
-											target="_blank"
-											rel="noopener noreferrer"
-											className="text-sm text-primary hover:underline mt-2 inline-block"
-										>
-											Source →
-										</a>
-									)}
-								</CardContent>
-							</Card>
-						))
+					{currentNote ? (
+						<Card>
+							<CardHeader className="flex flex-row items-center justify-between gap-4">
+								<CardTitle className="text-sm flex items-center gap-2">
+									<Badge variant="outline">
+										{currentNote.note_type === "ai" ? "AI 分析" : "复盘笔记"}
+									</Badge>
+									<span className="text-muted-foreground font-normal">
+										{new Date(currentNote.created_at).toLocaleDateString()}
+									</span>
+								</CardTitle>
+								<div className="flex gap-2">
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() => {
+											setNoteForm({
+												note_type: currentNote.note_type,
+												content: currentNote.content,
+												source_url: currentNote.source_url ?? "",
+											});
+											setNoteDialogOpen(true);
+										}}
+									>
+										编辑
+									</Button>
+									<Button
+										variant="destructive"
+										size="sm"
+										onClick={() => {
+											if (confirm("确定删除这条笔记吗？")) {
+												deleteNote.mutate(currentNote.id);
+											}
+										}}
+										disabled={deleteNote.isPending}
+									>
+										删除
+									</Button>
+								</div>
+							</CardHeader>
+							<CardContent>
+								<div className="prose prose-sm max-w-none dark:prose-invert">
+									<ReactMarkdown
+										remarkPlugins={[remarkGfm, remarkMath]}
+										rehypePlugins={[rehypeKatex]}
+										components={markdownComponents()}
+									>
+										{currentNote.content}
+									</ReactMarkdown>
+								</div>
+							</CardContent>
+						</Card>
 					) : (
 						<p className="text-muted-foreground text-sm py-4">
-							No notes yet. Add solution notes or AI analysis above.
-						</p>
-					)}
-				</TabsContent>
-
-				{/* Errors tab */}
-				<TabsContent value="errors" className="space-y-4">
-					{errors && errors.length > 0 ? (
-						errors.map((err) => (
-							<Card key={err.id}>
-								<CardHeader>
-									<CardTitle className="text-sm">
-										<Badge variant="error" className="mr-2">
-											{err.error_type}
-										</Badge>
-										{new Date(err.created_at).toLocaleDateString()}
-									</CardTitle>
-								</CardHeader>
-								<CardContent className="space-y-3 text-sm">
-									<div>
-										<strong>Root Cause:</strong>
-										<p className="text-muted-foreground mt-1">
-											{err.root_cause}
-										</p>
-									</div>
-									<div>
-										<strong>Fix:</strong>
-										<p className="text-muted-foreground mt-1">
-											{err.fix_summary}
-										</p>
-									</div>
-									<div>
-										<strong>Related Knowledge:</strong>
-										<div className="flex flex-wrap gap-1 mt-1">
-											{err.related_knowledge.map((k) => (
-												<Badge key={k} variant="secondary" className="text-xs">
-													{k}
-												</Badge>
-											))}
-										</div>
-									</div>
-								</CardContent>
-							</Card>
-						))
-					) : (
-						<p className="text-muted-foreground text-sm py-4">
-							No error analyses yet. Use the AI analysis feature to generate
-							them.
+							还没有笔记。每道题只保留一条复盘笔记，AI 分析也会覆盖写入这里。
 						</p>
 					)}
 				</TabsContent>
 			</Tabs>
+
+			{/* Code viewer dialog */}
+			<Dialog open={codeViewerOpen} onOpenChange={setCodeViewerOpen}>
+				<DialogContent className="sm:max-w-3xl max-h-[80vh] flex flex-col">
+					<DialogHeader>
+						<DialogTitle>
+							源码
+							{viewedSubmission && (
+								<span className="ml-2 text-sm font-normal text-muted-foreground">
+									{viewedSubmission.language}
+									<Badge
+										variant={
+											statusColors[viewedSubmission.status] ?? "secondary"
+										}
+										className="ml-2"
+									>
+										{viewedSubmission.status}
+									</Badge>
+								</span>
+							)}
+						</DialogTitle>
+					</DialogHeader>
+					<div className="flex-1 overflow-auto">
+						{codeLoading ? (
+							<div className="flex items-center justify-center py-12">
+								<Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+							</div>
+						) : viewedSubmission?.code_text ? (
+							<pre className="overflow-x-auto rounded-lg bg-muted p-4 text-sm font-mono">
+								<code>{viewedSubmission.code_text}</code>
+							</pre>
+						) : (
+							<p className="text-sm text-muted-foreground py-8 text-center">
+								暂无源码。请先在设置页填写 VJudge Cookie 后重新同步。
+							</p>
+						)}
+					</div>
+				</DialogContent>
+			</Dialog>
 		</div>
 	);
 }
