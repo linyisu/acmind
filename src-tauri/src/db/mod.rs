@@ -14,10 +14,20 @@ pub async fn init_db(app_data_dir: &PathBuf) -> Result<SqlitePool, sqlx::Error> 
 
     let pool = SqlitePoolOptions::new()
         .max_connections(8)
+        .after_connect(|conn, _meta| {
+            Box::pin(async move {
+                // SQLite requires explicit PRAGMA to enforce foreign keys
+                sqlx::query("PRAGMA foreign_keys = ON")
+                    .execute(conn)
+                    .await?;
+                Ok(())
+            })
+        })
         .connect(&db_url)
         .await?;
 
     run_migrations(&pool).await?;
+    clean_orphaned_records(&pool).await?;
     seed_knowledge_points(&pool).await?;
 
     Ok(pool)
@@ -94,6 +104,25 @@ async fn seed_knowledge_points(pool: &SqlitePool) -> Result<(), sqlx::Error> {
         .execute(pool)
         .await?;
     }
+
+    Ok(())
+}
+
+/// Clean up orphaned records caused by missing FK enforcement in earlier versions.
+async fn clean_orphaned_records(pool: &SqlitePool) -> Result<(), sqlx::Error> {
+    sqlx::query("DELETE FROM submissions WHERE problem_id NOT IN (SELECT id FROM problems)")
+        .execute(pool)
+        .await?;
+
+    sqlx::query(
+        "DELETE FROM error_analyses WHERE problem_id NOT IN (SELECT id FROM problems) OR submission_id NOT IN (SELECT id FROM submissions)",
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query("DELETE FROM solution_notes WHERE problem_id NOT IN (SELECT id FROM problems)")
+        .execute(pool)
+        .await?;
 
     Ok(())
 }
