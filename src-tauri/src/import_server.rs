@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
 use std::sync::Arc;
 use std::thread;
+use tauri::Emitter;
 use tiny_http::{Header, Method, Request, Response, StatusCode};
 use tokio::runtime::Handle;
 
@@ -98,18 +99,33 @@ struct ServerState {
     pool: SqlitePool,
     storage: Storage,
     rt: Handle,
+    app_handle: tauri::AppHandle,
 }
 
 impl ServerState {
-    /// Run an async future on the captured tokio runtime, blocking the current thread.
     fn block_on<F: std::future::Future>(&self, f: F) -> F::Output {
         self.rt.block_on(f)
+    }
+
+    fn notify_imported(&self, action: &str, detail: &str) {
+        let payload = serde_json::json!({
+            "action": action,
+            "detail": detail,
+            "timestamp": chrono::Utc::now().timestamp_millis(),
+        });
+        if let Err(e) = self.app_handle.emit("vjudge-imported", &payload) {
+            tracing::warn!(target: "app_lib::import_server", "Failed to emit vjudge-imported event: {}", e);
+        }
     }
 }
 
 /// Start the import HTTP server on a background thread.
 /// Creates its own Tokio runtime for async DB operations.
-pub fn start_import_server(pool: SqlitePool, storage: Storage) -> ImportServerHandle {
+pub fn start_import_server(
+    pool: SqlitePool,
+    storage: Storage,
+    app_handle: tauri::AppHandle,
+) -> ImportServerHandle {
     let rt = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
@@ -119,6 +135,7 @@ pub fn start_import_server(pool: SqlitePool, storage: Storage) -> ImportServerHa
         pool,
         storage,
         rt: handle,
+        app_handle,
     });
     let server = tiny_http::Server::http(BIND_ADDR).expect("Failed to start ACMind import server");
 
@@ -280,6 +297,16 @@ fn handle_import_submissions(
             }
         }
     }
+
+    state.notify_imported(
+        "submissions",
+        &format!(
+            "{} imported ({} new, {} skipped)",
+            payload.items.len(),
+            imported,
+            skipped
+        ),
+    );
 
     Ok(json_response(
         StatusCode(200),
@@ -492,6 +519,8 @@ fn handle_import_problem(
         }
     }
 
+    state.notify_imported("problem", &format!("Created {}", source_problem_id));
+
     Ok(json_response(
         StatusCode(200),
         &ApiResponse {
@@ -613,6 +642,14 @@ fn handle_import_submission(
             &code_path,
         ))
         .map_err(|e| format!("Failed to create submission: {}", e))?;
+
+    state.notify_imported(
+        "submission",
+        &format!(
+            "#{} {}-{} {}",
+            payload.run_id, payload.oj, payload.prob_num, payload.status
+        ),
+    );
 
     Ok(json_response(
         StatusCode(200),

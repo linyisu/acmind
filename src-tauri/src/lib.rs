@@ -60,7 +60,11 @@ pub fn run() {
             let storage = Storage::new(app_data_dir.clone());
 
             // Start the import server for browser extension communication
-            let _import_handle = import_server::start_import_server(pool.clone(), storage.clone());
+            let _import_handle = import_server::start_import_server(
+                pool.clone(),
+                storage.clone(),
+                app.handle().clone(),
+            );
 
             app.manage(pool);
             app.manage(storage);

@@ -1,6 +1,8 @@
 import { Routes, Route } from "react-router-dom";
 import { AppSidebar } from "./components/layout/AppSidebar";
 import { AppTitleBar } from "./components/layout/AppTitleBar";
+import { ImportToast } from "./components/ImportToast";
+import { useVJudgeImportListener } from "./hooks/useVJudgeImportListener";
 import { DashboardPage } from "./pages/DashboardPage";
 import { ProblemsPage } from "./pages/ProblemsPage";
 import { ProblemDetailPage } from "./pages/ProblemDetailPage";
@@ -9,6 +11,8 @@ import { KnowledgePage } from "./pages/KnowledgePage";
 import { SettingsPage } from "./pages/SettingsPage";
 
 function App() {
+	const { notifications, dismiss } = useVJudgeImportListener();
+
 	return (
 		<div className="flex h-screen flex-col overflow-hidden">
 			<AppTitleBar />
@@ -25,6 +29,7 @@ function App() {
 					</Routes>
 				</main>
 			</div>
+			<ImportToast notifications={notifications} dismiss={dismiss} />
 		</div>
 	);
 }
