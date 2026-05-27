@@ -110,7 +110,7 @@ export function DashboardPage() {
 							<stat.icon className={`h-4 w-4 ${stat.color}`} />
 						</CardHeader>
 						<CardContent>
-							{isLoading ? (
+							{isLoading && !data ? (
 								<Skeleton className="h-8 w-16" />
 							) : (
 								<div className="text-2xl font-bold">{stat.value}</div>

@@ -68,7 +68,7 @@ function sleep(ms) {
 
 // ---- Message handlers ----
 // Firefox supports both chrome.runtime.onMessage and browser.runtime.onMessage
-chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 	if (msg.type === "import-to-acmind") {
 		handleImport(msg.payload)
 			.then(sendResponse)
@@ -115,8 +115,8 @@ async function handleImport(payload) {
 			break;
 
 		case "problem-page":
-			endpoint = "/vjudge/import/problem";
-			data = {
+			// First import the problem
+			await postToAcmind("/vjudge/import/problem", {
 				sourceProblemId: payload.sourceProblemId,
 				oj: payload.oj,
 				probNum: payload.probNum,
@@ -124,8 +124,27 @@ async function handleImport(payload) {
 				url: payload.url,
 				statement: payload.statement,
 				tags: payload.tags,
-			};
-			break;
+			});
+			// Then import submissions with source codes if present
+			if (payload.submissions && payload.submissions.length > 0) {
+				return postToAcmind("/vjudge/import/submissions", {
+					username: payload.username || "",
+					items: payload.submissions.map((s) => ({
+						runId: s.runId,
+						oj: s.oj,
+						probNum: s.probNum,
+						status: s.status,
+						language: s.language,
+						runtime: s.runtime,
+						memory: s.memory,
+						time: s.time || 0,
+						sourceProblemId: s.sourceProblemId,
+						code: s.code || undefined,
+					})),
+					includeSource: false,
+				});
+			}
+			return { success: true, message: "Problem imported" };
 
 		case "solution-page":
 			endpoint = "/vjudge/import/submission";

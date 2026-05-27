@@ -21,9 +21,7 @@ let nextId = 0;
  */
 export function useVJudgeImportListener() {
 	const queryClient = useQueryClient();
-	const [notifications, setNotifications] = useState<ImportNotification[]>(
-		[],
-	);
+	const [notifications, setNotifications] = useState<ImportNotification[]>([]);
 
 	const dismiss = useCallback((id: number) => {
 		setNotifications((prev) => prev.filter((n) => n.id !== id));
@@ -35,25 +33,31 @@ export function useVJudgeImportListener() {
 		async function setup() {
 			try {
 				const { listen } = await import("@tauri-apps/api/event");
-				unlisten = await listen<ImportEvent>(
-					"vjudge-imported",
-					(event) => {
-						const { action, detail } = event.payload;
-						const id = nextId++;
+				unlisten = await listen<ImportEvent>("vjudge-imported", (event) => {
+					const { action, detail } = event.payload;
+					const id = nextId++;
 
-						setNotifications((prev) => [
-							...prev.slice(-4),
-							{ id, message: `${action}: ${detail}` },
-						]);
+					setNotifications((prev) => [
+						...prev.slice(-4),
+						{ id, message: `${action}: ${detail}` },
+					]);
 
-						setTimeout(() => dismiss(id), 5000);
+					setTimeout(() => dismiss(id), 5000);
 
-						queryClient.invalidateQueries({ queryKey: ["problems"] });
-						queryClient.invalidateQueries({ queryKey: ["dashboard"] });
-						queryClient.invalidateQueries({ queryKey: ["submissions"] });
-						queryClient.invalidateQueries({ queryKey: ["reports"] });
-					},
-				);
+					queryClient.refetchQueries({
+						queryKey: ["problems"],
+						type: "active",
+					});
+					queryClient.refetchQueries({
+						queryKey: ["dashboard-stats"],
+						type: "active",
+					});
+					queryClient.refetchQueries({
+						queryKey: ["submissions"],
+						exact: false,
+						type: "active",
+					});
+				});
 			} catch {
 				// Tauri APIs unavailable (e.g., browser dev mode) — ignore
 			}

@@ -3,6 +3,7 @@ mod commands;
 mod db;
 mod error;
 mod import_server;
+mod import_service;
 mod storage;
 mod vjudge;
 

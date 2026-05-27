@@ -159,7 +159,7 @@ export function ReportsPage() {
 			</div>
 
 			{/* Report list */}
-			{isLoading ? (
+			{isLoading && !reports ? (
 				<div className="space-y-4">
 					{Array.from({ length: 3 }).map((_, i) => (
 						<Skeleton key={i} className="h-32 w-full" />

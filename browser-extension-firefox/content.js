@@ -1,12 +1,6 @@
-// ACMind VJudge Importer — Page-context injector.
-// This script runs in the content script isolated world. It injects a
-// page-context script (vjudge-scraper.js) that has same-origin access to
-// vjudge's internal AJAX APIs, then relays scraped data to the extension
-// background worker via chrome.runtime.sendMessage.
+// ACMind VJudge Importer — Firefox content injector.
+// Mirrors the Chrome content script behavior.
 
-const ACMIND_PORT = 18921;
-
-// ---- Detect current page type ----
 function detectPageType() {
 	const href = window.location.href;
 	if (href.includes("/status")) return "status";
@@ -15,7 +9,6 @@ function detectPageType() {
 	return "other";
 }
 
-// ---- Inject page-context script ----
 function injectScraper() {
 	const script = document.createElement("script");
 	script.src = chrome.runtime.getURL("vjudge-scraper.js");
@@ -23,53 +16,51 @@ function injectScraper() {
 	(document.head || document.documentElement).appendChild(script);
 }
 
-// ---- Listen for messages from page-context script ----
-window.addEventListener("message", (event) => {
-	if (event.source !== window) return;
-	const msg = event.data;
-	if (!msg || msg.source !== "acmind-vjudge-scraper") return;
+async function sendRuntimeMessage(message) {
+	return chrome.runtime.sendMessage(message);
+}
 
-	if (msg.type === "scraped-data") {
-		// Forward to background worker for POST to ACMind app
-		chrome.runtime
-			.sendMessage({
-				type: "import-to-acmind",
-				payload: msg.payload,
-			})
-			.catch(() => {
-				// Background might not be ready; retry once
-				setTimeout(() => {
-					chrome.runtime
-						.sendMessage({
-							type: "import-to-acmind",
-							payload: msg.payload,
-						})
-						.catch(() => {});
-				}, 500);
-			});
-	} else if (msg.type === "scraper-ready") {
-		console.log("[ACMind] Scraper injected and ready");
-	} else if (msg.type === "scraper-progress") {
-		// Forward progress to popup if open
-		chrome.runtime
-			.sendMessage({
-				type: "import-progress",
-				...msg,
-			})
-			.catch(() => {});
+function setStatusText(text) {
+	const el = document.getElementById("acmind-status-text");
+	if (el) el.textContent = text;
+}
+
+function formatImportSuccess(payload, result) {
+	if (result?.message) return result.message;
+	if (payload.type === "status-page" || payload.type === "status-all") {
+		return `Imported ${payload.items?.length || 0} submissions`;
 	}
-});
+	if (payload.type === "problem-page") {
+		const subCount = payload.submissions?.length || 0;
+		return (
+			`Imported problem${payload.title ? ": " + payload.title : ""}` +
+			(subCount > 0 ? ` + ${subCount} submissions` : "")
+		);
+	}
+	if (payload.type === "solution-page") {
+		return `Imported submission #${payload.runId || "?"}`;
+	}
+	return "Import complete";
+}
 
-// ---- Add UI buttons to the page ----
-function addImportButtons() {
-	const pageType = detectPageType();
+async function importPayloadToAcmind(payload) {
+	setStatusText("⏳ Uploading to ACMind...");
 
-	if (pageType === "status") {
-		addStatusPageButtons();
-	} else if (pageType === "problem") {
-		addProblemPageButtons();
-	} else if (pageType === "solution") {
-		addSolutionPageButtons();
+	try {
+		const result = await sendRuntimeMessage({
+			type: "import-to-acmind",
+			payload,
+		});
+
+		if (!result?.success) {
+			throw new Error(result?.error || result?.message || "Import failed");
+		}
+
+		setStatusText(`✅ ${formatImportSuccess(payload, result)}`);
+	} catch (error) {
+		const message = error instanceof Error ? error.message : String(error);
+		setStatusText(`❌ ${message}`);
+		console.error("[ACMind] Import failed:", error);
 	}
 }
 
@@ -81,8 +72,19 @@ function createButton(text, className, onClick) {
 	return btn;
 }
 
+function requestScrape(mode) {
+	setStatusText("⏳ Scraping...");
+	window.postMessage(
+		{
+			source: "acmind-content-script",
+			type: "scrape-request",
+			mode,
+		},
+		"*",
+	);
+}
+
 function addStatusPageButtons() {
-	// Add a floating import bar at the top of the status table
 	const container = document.createElement("div");
 	container.id = "acmind-import-bar";
 	container.style.cssText = `
@@ -98,37 +100,31 @@ function addStatusPageButtons() {
 	label.style.cssText = "font-weight: 600; margin-right: 4px;";
 	container.appendChild(label);
 
-	const importCurrentBtn = createButton(
-		"Import this page",
-		"acmind-btn acmind-btn-primary",
-		() => requestScrape("status-page"),
+	container.appendChild(
+		createButton("Import this page", "acmind-btn acmind-btn-primary", () =>
+			requestScrape("status-page"),
+		),
 	);
-	container.appendChild(importCurrentBtn);
-
-	const importAllBtn = createButton(
-		"Import all submissions",
-		"acmind-btn acmind-btn-accent",
-		() => requestScrape("status-all"),
+	container.appendChild(
+		createButton("Import all submissions", "acmind-btn acmind-btn-accent", () =>
+			requestScrape("status-all"),
+		),
 	);
-	container.appendChild(importAllBtn);
 
 	const statusText = document.createElement("span");
 	statusText.id = "acmind-status-text";
 	statusText.style.cssText = "margin-left: auto; font-size: 12px; color: #888;";
 	container.appendChild(statusText);
 
-	// Insert before the status table
 	const table = document.querySelector("#status-root, .vjudge_table, table");
 	if (table) {
 		table.parentNode.insertBefore(container, table);
 	} else {
-		// Fallback: prepend to body
 		document.body.prepend(container);
 	}
 }
 
 function addProblemPageButtons() {
-	// Add import button near the problem title
 	const titleEl = document.querySelector(
 		"h1, h2, .problem-title, #problem-title",
 	);
@@ -142,12 +138,11 @@ function addProblemPageButtons() {
     padding: 8px 0; margin: 8px 0;
   `;
 
-	const importBtn = createButton(
-		"🧠 Import to ACMind",
-		"acmind-btn acmind-btn-primary",
-		() => requestScrape("problem-page"),
+	container.appendChild(
+		createButton("🧠 Import to ACMind", "acmind-btn acmind-btn-primary", () =>
+			requestScrape("problem-page"),
+		),
 	);
-	container.appendChild(importBtn);
 
 	const statusText = document.createElement("span");
 	statusText.id = "acmind-status-text";
@@ -158,7 +153,6 @@ function addProblemPageButtons() {
 }
 
 function addSolutionPageButtons() {
-	// Add import button near the solution header
 	const headerEl = document.querySelector(
 		"#solution-header, .solution-header, h1, h2",
 	);
@@ -172,12 +166,13 @@ function addSolutionPageButtons() {
     padding: 8px 0; margin: 8px 0;
   `;
 
-	const importBtn = createButton(
-		"🧠 Import this submission",
-		"acmind-btn acmind-btn-primary",
-		() => requestScrape("solution-page"),
+	container.appendChild(
+		createButton(
+			"🧠 Import this submission",
+			"acmind-btn acmind-btn-primary",
+			() => requestScrape("solution-page"),
+		),
 	);
-	container.appendChild(importBtn);
 
 	const statusText = document.createElement("span");
 	statusText.id = "acmind-status-text";
@@ -187,59 +182,39 @@ function addSolutionPageButtons() {
 	insertAfter.parentNode.insertBefore(container, insertAfter.nextSibling);
 }
 
-function requestScrape(mode) {
-	setStatusText("⏳ Scraping...");
-
-	window.postMessage(
-		{
-			source: "acmind-content-script",
-			type: "scrape-request",
-			mode: mode,
-		},
-		"*",
-	);
+function addImportButtons() {
+	const pageType = detectPageType();
+	if (pageType === "status") addStatusPageButtons();
+	else if (pageType === "problem") addProblemPageButtons();
+	else if (pageType === "solution") addSolutionPageButtons();
 }
 
-function setStatusText(text) {
-	const el = document.getElementById("acmind-status-text");
-	if (el) el.textContent = text;
-}
-
-// ---- Listen for scraper responses to update UI ----
 window.addEventListener("message", (event) => {
 	if (event.source !== window) return;
 	const msg = event.data;
 	if (!msg || msg.source !== "acmind-vjudge-scraper") return;
 
-	if (msg.type === "scraper-progress") {
+	if (msg.type === "scraped-data") {
+		void importPayloadToAcmind(msg.payload);
+	} else if (msg.type === "scraper-ready") {
+		console.log("[ACMind] Scraper injected and ready");
+	} else if (msg.type === "scraper-progress") {
 		setStatusText(`⏳ ${msg.message}`);
-	} else if (msg.type === "scraped-data") {
-		const p = msg.payload;
-		if (p.type === "status-page" || p.type === "status-all") {
-			setStatusText(`✅ Imported ${p.items?.length || 0} submissions`);
-		} else if (p.type === "problem-page") {
-			setStatusText(`✅ Imported problem${p.title ? ": " + p.title : ""}`);
-		} else if (p.type === "solution-page") {
-			setStatusText(`✅ Imported submission #${p.runId || "?"}`);
-		}
+	} else if (msg.type === "scraper-error") {
+		setStatusText(`❌ ${msg.message || "Scraping failed"}`);
 	}
 });
 
-// ---- Also handle import-progress from background ----
 chrome.runtime.onMessage.addListener((msg) => {
-	if (msg.type === "import-progress") {
-		setStatusText(`⏳ ${msg.message}`);
-	} else if (msg.type === "import-complete") {
-		setStatusText(`✅ ${msg.message}`);
-	} else if (msg.type === "import-error") {
-		setStatusText(`❌ ${msg.message}`);
+	if (msg.type === "acmind-connection-change") {
+		setStatusText(
+			msg.available ? "✅ ACMind connected" : "❌ ACMind disconnected",
+		);
 	}
 });
 
-// ---- Init ----
 injectScraper();
 
-// Wait for scraper-ready before adding buttons
 window.addEventListener("message", function onReady(event) {
 	if (event.source !== window) return;
 	const msg = event.data;

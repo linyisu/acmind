@@ -120,7 +120,7 @@ export function SettingsPage() {
 				</p>
 			</div>
 
-			{isLoading ? (
+			{isLoading && !settings ? (
 				<div className="space-y-4">
 					<Skeleton className="h-48 w-full" />
 				</div>
@@ -172,23 +172,6 @@ export function SettingsPage() {
 						</CardHeader>
 						<CardContent className="space-y-3">
 							<div className="rounded-md bg-muted/50 p-3 text-sm space-y-2">
-								<p className="font-medium">Chrome / Edge / Brave 安装步骤：</p>
-								<ol className="list-decimal list-inside space-y-1 text-muted-foreground">
-									<li>
-										打开{" "}
-										<code className="text-xs bg-muted px-1 rounded">
-											chrome://extensions
-										</code>
-									</li>
-									<li>开启右上角「开发者模式」</li>
-									<li>
-										点击「加载已解压的扩展程序」，选择{" "}
-										<code className="text-xs bg-muted px-1 rounded">
-											browser-extension
-										</code>{" "}
-										目录
-									</li>
-								</ol>
 								<p className="font-medium mt-3">Firefox 安装步骤：</p>
 								<ol className="list-decimal list-inside space-y-1 text-muted-foreground">
 									<li>

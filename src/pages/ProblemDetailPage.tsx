@@ -289,7 +289,7 @@ export function ProblemDetailPage() {
 		},
 	});
 
-	if (isLoading) {
+	if (isLoading && !problem) {
 		return (
 			<div className="space-y-4">
 				<Skeleton className="h-8 w-64" />

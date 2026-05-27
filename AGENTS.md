@@ -54,6 +54,14 @@ src-tauri/
 - For Rust: check compilation with `cargo check` before committing.
 - For TypeScript: check with `pnpm tsc -b`.
 
+### 4. Architecture Hygiene — No God Files
+- Keep boundaries explicit: HTTP/Tauri handlers parse requests and return responses; service modules own business workflows; repo modules only do persistence; storage modules only do file IO.
+- Do not add new business logic to files already mixing 3+ responsibilities. Extract a small service/helper first, then call it.
+- Avoid duplicate workflows. If browser-extension import and GUI import need the same behavior, share a Rust service or a shared JS helper instead of copy-pasting logic.
+- Do not use fire-and-forget success semantics. UI success must mean the backend operation actually completed successfully.
+- Do not swallow production errors with `let _ =`, `unwrap_or_default()`, empty `catch`, or fake success responses. Either propagate the error or log it with enough context and return an accurate partial-success result.
+- Keep import/sync flows idempotent: check whether data already exists before writing files, and report `created`, `updated`, `skipped`, and `source_synced` according to what actually happened.
+
 ### 5. Error Handling (Rust)
 - Use `AppError` (defined in `src-tauri/src/error.rs`) for all fallible operations.
 - Commands return `Result<T, AppError>` — Tauri serializes it for the frontend.
@@ -89,7 +97,7 @@ Before committing work:
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **acmind** (845 symbols, 1874 relationships, 70 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **acmind** (1203 symbols, 2565 relationships, 101 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 

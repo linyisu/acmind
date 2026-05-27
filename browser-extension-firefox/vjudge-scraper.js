@@ -88,35 +88,20 @@
 
 	// ---- Scrape: status page (current visible page) ----
 	async function scrapeStatusPage() {
-		const username = extractUsernameFromPage();
-		if (!username) {
-			throw new Error("Could not determine VJudge username from page");
-		}
-
-		// Try to get current page params from the DataTable
+		const username = requireUsername();
 		const pageIdx = getCurrentStatusPage();
-		const start = pageIdx * PAGE_SIZE;
 
 		progress(`Fetching submissions page ${pageIdx + 1}...`);
 
-		const params = new URLSearchParams({
-			draw: "1",
-			start: String(start),
-			length: String(PAGE_SIZE),
-			un: username,
-			OJId: "All",
+		const resp = await fetchStatusPage({
+			page: pageIdx,
+			username,
+			oj: "All",
 			probNum: "",
-			res: "all",
-			language: "",
-			onlyFollowee: "false",
-			orderBy: "run_id",
-			// Also get the hidden columns
+			draw: 1,
 		});
 
-		const url = `${VJUDGE_ORIGIN}/status/data?${params.toString()}`;
-		const resp = await fetchJSON(url);
-
-		if (!resp.data || !Array.isArray(resp.data)) {
+		if (!Array.isArray(resp.data)) {
 			throw new Error("Unexpected response from VJudge status API");
 		}
 
@@ -132,39 +117,25 @@
 
 	// ---- Scrape: all status pages ----
 	async function scrapeStatusAll() {
-		const username = extractUsernameFromPage();
-		if (!username) {
-			throw new Error("Could not determine VJudge username from page");
-		}
-
+		const username = requireUsername();
 		const allItems = [];
+
 		for (let page = 0; page < 200; page++) {
-			const start = page * PAGE_SIZE;
 			progress(`Fetching submissions page ${page + 1}...`);
-			const params = new URLSearchParams({
-				draw: String(page + 1),
-				start: String(start),
-				length: String(PAGE_SIZE),
-				un: username,
-				OJId: "All",
+			const resp = await fetchStatusPage({
+				page,
+				username,
+				oj: "All",
 				probNum: "",
-				res: "all",
-				language: "",
-				onlyFollowee: "false",
-				orderBy: "run_id",
+				draw: page + 1,
 			});
 
-			const url = `${VJUDGE_ORIGIN}/status/data?${params.toString()}`;
-			const resp = await fetchJSON(url);
-
-			if (!resp.data || !Array.isArray(resp.data) || resp.data.length === 0) {
+			if (!Array.isArray(resp.data) || resp.data.length === 0) {
 				break;
 			}
 
-			const items = resp.data.map(parseSubmissionItem);
-			allItems.push(...items);
+			allItems.push(...resp.data.map(parseSubmissionItem));
 
-			// Delay to avoid rate limiting
 			if (page < 199) {
 				await sleep(300);
 			}
@@ -178,75 +149,154 @@
 		};
 	}
 
-	// ---- Scrape: problem page (description + metadata) ----
+	async function fetchStatusPage({ page, username, oj, probNum, draw }) {
+		const params = new URLSearchParams({
+			draw: String(draw),
+			start: String(page * PAGE_SIZE),
+			length: String(PAGE_SIZE),
+			un: username || "",
+			OJId: oj,
+			probNum,
+			res: "all",
+			language: "",
+			onlyFollowee: "false",
+			orderBy: "run_id",
+		});
+
+		return fetchJSON(`${VJUDGE_ORIGIN}/status/data?${params.toString()}`);
+	}
+
+	// ---- Scrape: problem page (description + metadata + submissions + source code) ----
 	async function scrapeProblemPage() {
 		const sourceProblemId = extractSourceProblemId();
 		if (!sourceProblemId) {
 			throw new Error("Could not determine problem ID from URL");
 		}
 
-		progress(`Fetching problem ${sourceProblemId}...`);
-
-		// Fetch the problem page HTML
-		const html = await fetchText(`${VJUDGE_ORIGIN}/problem/${sourceProblemId}`);
-
-		const data = extractPageJson(html, "dataJson");
-		const title = extractTitle(html, sourceProblemId);
-		const [oj, probNum] = sourceProblemId.split("-");
-
-		// Try to fetch description
-		let statement = null;
-		if (data && data.descBriefs && data.descBriefs.length > 0) {
-			const desc = data.descBriefs[0];
-			try {
-				const descHtml = await fetchText(
-					`${VJUDGE_ORIGIN}/problem/description/${desc.key}?${desc.version}`,
-				);
-				const descData = extractPageJson(descHtml, "data-json-container");
-				if (descData && descData.sections) {
-					statement = descData.sections
-						.map((sec) => {
-							const title = sec.title ? `## ${sec.title}\n\n` : "";
-							const content = stripHtml(sec.value?.content || "");
-							return title + content;
-						})
-						.join("\n\n");
-				}
-			} catch (e) {
-				// Description might be in a different format — try alternative path
-				progress(`Description fetch failed: ${e.message}, trying fallback...`);
-				const descPathMatch = html.match(/\/problem\/description\/\d+/);
-				if (descPathMatch) {
-					try {
-						const descHtml = await fetchText(
-							`${VJUDGE_ORIGIN}${descPathMatch[0]}`,
-						);
-						const descData = extractPageJson(descHtml, "data-json-container");
-						if (descData && descData.sections) {
-							statement = descData.sections
-								.map((sec) => {
-									const title = sec.title ? `## ${sec.title}\n\n` : "";
-									const content = stripHtml(sec.value?.content || "");
-									return title + content;
-								})
-								.join("\n\n");
-						}
-					} catch {}
-				}
-			}
-		}
+		const problem = await scrapeProblemMetadata(sourceProblemId);
+		const username = extractUsernameFromPage();
+		const submissions = await scrapeProblemSubmissionsWithSource(
+			problem,
+			username,
+		);
 
 		return {
 			type: "problem-page",
 			sourceProblemId,
-			oj: data?.oj || oj,
-			probNum: data?.prob || probNum,
-			title: title,
+			oj: problem.oj,
+			probNum: problem.probNum,
+			title: problem.title,
 			url: `${VJUDGE_ORIGIN}/problem/${sourceProblemId}`,
-			statement: statement,
-			tags: data?.oj ? [data.oj] : [oj],
-			rawData: data,
+			statement: problem.statement,
+			tags: problem.tags,
+			rawData: problem.rawData,
+			username,
+			submissions,
 		};
+	}
+
+	async function scrapeProblemMetadata(sourceProblemId) {
+		progress(`Fetching problem ${sourceProblemId}...`);
+
+		const html = await fetchText(`${VJUDGE_ORIGIN}/problem/${sourceProblemId}`);
+		const rawData = extractPageJson(html, "dataJson");
+		const title = extractTitle(html, sourceProblemId);
+		const [fallbackOj, fallbackProbNum] = sourceProblemId.split("-");
+		const oj = rawData?.oj || fallbackOj;
+		const probNum = rawData?.prob || fallbackProbNum;
+
+		return {
+			sourceProblemId,
+			oj,
+			probNum,
+			title,
+			statement: await scrapeProblemStatement(html, rawData),
+			tags: rawData?.oj ? [rawData.oj] : [fallbackOj],
+			rawData,
+		};
+	}
+
+	async function scrapeProblemStatement(problemHtml, rawData) {
+		const desc = rawData?.descBriefs?.[0];
+		if (desc) {
+			try {
+				const descHtml = await fetchText(
+					`${VJUDGE_ORIGIN}/problem/description/${desc.key}?${desc.version}`,
+				);
+				const statement = parseStatementFromDescription(descHtml);
+				if (statement) return statement;
+			} catch (e) {
+				progress(`Description fetch failed: ${e.message}, trying fallback...`);
+			}
+		}
+
+		const descPathMatch = problemHtml.match(/\/problem\/description\/\d+/);
+		if (!descPathMatch) return null;
+
+		try {
+			const descHtml = await fetchText(`${VJUDGE_ORIGIN}${descPathMatch[0]}`);
+			return parseStatementFromDescription(descHtml);
+		} catch {
+			return null;
+		}
+	}
+
+	function parseStatementFromDescription(descHtml) {
+		const descData = extractPageJson(descHtml, "data-json-container");
+		if (!descData?.sections) return null;
+
+		return descData.sections
+			.map((sec) => {
+				const title = sec.title ? `## ${sec.title}\n\n` : "";
+				const content = stripHtml(sec.value?.content || "");
+				return title + content;
+			})
+			.join("\n\n");
+	}
+
+	async function scrapeProblemSubmissionsWithSource(problem, username) {
+		if (!username) return [];
+
+		progress(
+			`Fetching your submissions for ${problem.oj}-${problem.probNum}...`,
+		);
+
+		let submissions = [];
+		try {
+			submissions = await scrapeProblemSubmissions(
+				problem.oj,
+				problem.probNum,
+				username,
+			);
+		} catch (e) {
+			console.warn("[ACMind] Failed to scrape submissions:", e.message);
+			return [];
+		}
+
+		return attachSourceCodeToSubmissions(submissions);
+	}
+
+	async function attachSourceCodeToSubmissions(submissions) {
+		for (let i = 0; i < submissions.length; i++) {
+			const sub = submissions[i];
+			progress(
+				`Fetching source code ${i + 1}/${submissions.length} (run #${sub.runId})...`,
+			);
+			try {
+				const code = await scrapeSourceCode(sub.runId);
+				if (code) sub.code = code;
+			} catch (e) {
+				console.warn(
+					`[ACMind] Failed to fetch source for run #${sub.runId}:`,
+					e.message,
+				);
+			}
+			if (i < submissions.length - 1) {
+				await sleep(400);
+			}
+		}
+
+		return submissions;
 	}
 
 	// ---- Scrape: solution page (source code + submission metadata) ----
@@ -258,27 +308,7 @@
 
 		progress(`Fetching solution #${runId}...`);
 
-		// POST to solution/data to get source code and full metadata
-		const url = `${VJUDGE_ORIGIN}/solution/data/${runId}?inPage=true`;
-		const resp = await fetch(url, {
-			method: "POST",
-			credentials: "include",
-			headers: {
-				"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-				"X-Requested-With": "XMLHttpRequest",
-				Accept: "application/json, text/javascript, */*; q=0.01",
-				Origin: VJUDGE_ORIGIN,
-				Referer: `${VJUDGE_ORIGIN}/solution/${runId}`,
-			},
-			body: "shareCode=",
-		});
-
-		if (!resp.ok) {
-			throw new Error(`HTTP ${resp.status} for solution/${runId}`);
-		}
-
-		const data = await resp.json();
-
+		const data = await fetchSolutionData(runId);
 		if (!data.code && data.codeAccessInfo) {
 			throw new Error(
 				`Source code not accessible: ${data.codeAccessInfo.i18nKey || "unknown"}`,
@@ -303,25 +333,16 @@
 	async function scrapeProblemSubmissions(oj, probNum, username) {
 		const items = [];
 		for (let page = 0; page < 200; page++) {
-			const start = page * PAGE_SIZE;
 			progress(`Fetching submissions for ${oj}-${probNum} page ${page + 1}...`);
-			const params = new URLSearchParams({
-				draw: String(page + 1),
-				start: String(start),
-				length: String(PAGE_SIZE),
-				un: username || "",
-				OJId: oj,
-				probNum: probNum,
-				res: "all",
-				language: "",
-				onlyFollowee: "false",
-				orderBy: "run_id",
+			const resp = await fetchStatusPage({
+				page,
+				username,
+				oj,
+				probNum,
+				draw: page + 1,
 			});
 
-			const url = `${VJUDGE_ORIGIN}/status/data?${params.toString()}`;
-			const resp = await fetchJSON(url);
-
-			if (!resp.data || !Array.isArray(resp.data) || resp.data.length === 0) {
+			if (!Array.isArray(resp.data) || resp.data.length === 0) {
 				break;
 			}
 
@@ -338,23 +359,32 @@
 
 	// ---- Scrape: source code for a submission ----
 	async function scrapeSourceCode(runId) {
-		const url = `${VJUDGE_ORIGIN}/solution/data/${runId}?inPage=true`;
-		const resp = await fetch(url, {
-			method: "POST",
-			credentials: "include",
-			headers: {
-				"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-				"X-Requested-With": "XMLHttpRequest",
-				Accept: "application/json, text/javascript, */*; q=0.01",
-				Origin: VJUDGE_ORIGIN,
-				Referer: `${VJUDGE_ORIGIN}/solution/${runId}`,
-			},
-			body: "shareCode=",
-		});
-
-		if (!resp.ok) return null;
-		const data = await resp.json();
+		const data = await fetchSolutionData(runId);
 		return data.code || null;
+	}
+
+	async function fetchSolutionData(runId) {
+		const resp = await fetch(
+			`${VJUDGE_ORIGIN}/solution/data/${runId}?inPage=true`,
+			{
+				method: "POST",
+				credentials: "include",
+				headers: {
+					"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+					"X-Requested-With": "XMLHttpRequest",
+					Accept: "application/json, text/javascript, */*; q=0.01",
+					Origin: VJUDGE_ORIGIN,
+					Referer: `${VJUDGE_ORIGIN}/solution/${runId}`,
+				},
+				body: "shareCode=",
+			},
+		);
+
+		if (!resp.ok) {
+			throw new Error(`HTTP ${resp.status} for solution/${runId}`);
+		}
+
+		return resp.json();
 	}
 
 	// ---- Parsers ----
@@ -375,41 +405,72 @@
 
 	// ---- Page info extractors ----
 	function extractUsernameFromPage() {
-		// Try multiple ways to extract username
-		// 1. From the status page URL query param
 		const urlParams = new URLSearchParams(window.location.search);
-		if (urlParams.get("un")) return urlParams.get("un");
+		const usernameFromQuery = cleanUsername(urlParams.get("un"));
+		if (usernameFromQuery) return usernameFromQuery;
 
-		// 2. From the page content (user dropdown / navbar)
+		const usernameFromUserLink = extractUsernameFromUserLink();
+		if (usernameFromUserLink) return usernameFromUserLink;
+
+		const usernameFromVisitorInput = cleanUsername(
+			document
+				.querySelector('input[name="sup"], input[id="visitor_sup"]')
+				?.getAttribute("value"),
+		);
+		if (usernameFromVisitorInput) return usernameFromVisitorInput;
+
+		const usernameFromScripts = extractUsernameFromScripts();
+		if (usernameFromScripts) return usernameFromScripts;
+
+		const usernameFromProfileHeader = cleanUsername(
+			document.querySelector("#header-username, .profile-username")
+				?.textContent,
+		);
+		return usernameFromProfileHeader;
+	}
+
+	function extractUsernameFromUserLink() {
 		const userEl = document.querySelector(
 			'a[href*="/user/"], .username, #user-menu, [data-username]',
 		);
-		if (userEl) {
-			const href = userEl.getAttribute("href") || "";
-			const match = href.match(/\/user\/([^/?]+)/);
-			if (match) return match[1];
-			const text = userEl.textContent?.trim();
-			if (text && !text.includes("Login")) return text;
-		}
+		if (!userEl) return null;
 
-		// 3. From the DataTable's ajax config (embedded in page JS)
+		const dataUsername = cleanUsername(userEl.getAttribute("data-username"));
+		if (dataUsername) return dataUsername;
+
+		const href = userEl.getAttribute("href") || "";
+		const match = href.match(/\/user\/([^/?]+)/);
+		if (match) return cleanUsername(decodeURIComponent(match[1]));
+
+		const text = cleanUsername(userEl.textContent);
+		return text && !text.includes("Login") ? text : null;
+	}
+
+	function extractUsernameFromScripts() {
 		const scripts = document.querySelectorAll("script");
 		for (const s of scripts) {
 			const text = s.textContent || "";
 			const match = text.match(/"un"\s*:\s*"([^"]+)"/);
-			if (match) return match[1];
-		}
+			if (match) return cleanUsername(match[1]);
 
-		// 4. From the page title or header
-		const header = document.querySelector(
-			"h1, h2, #header-username, .profile-username",
-		);
-		if (header) {
-			const text = header.textContent?.trim();
-			if (text && text.length < 50) return text;
+			const gaMatch = text.match(/'user_id'\s*:\s*'([^']+)'/);
+			if (gaMatch) return cleanUsername(gaMatch[1]);
 		}
-
 		return null;
+	}
+
+	function cleanUsername(value) {
+		const username = value?.trim();
+		if (!username || username.length >= 50) return null;
+		return username;
+	}
+
+	function requireUsername() {
+		const username = extractUsernameFromPage();
+		if (!username) {
+			throw new Error("Could not determine VJudge username from page");
+		}
+		return username;
 	}
 
 	function getCurrentStatusPage() {

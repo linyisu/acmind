@@ -81,7 +81,7 @@ export function ProblemsPage() {
 	const [vjudgeError, setVjudgeError] = useState("");
 	const [form, setForm] = useState({
 		title: "",
-		source: "Codeforces",
+		source: "",
 		source_problem_id: "",
 		url: "",
 		difficulty: "",
@@ -112,7 +112,7 @@ export function ProblemsPage() {
 			setDialogOpen(false);
 			setForm({
 				title: "",
-				source: "Codeforces",
+				source: "",
 				source_problem_id: "",
 				url: "",
 				difficulty: "",
@@ -281,7 +281,7 @@ export function ProblemsPage() {
 										id="url"
 										value={form.url}
 										onChange={(e) => setForm({ ...form, url: e.target.value })}
-										placeholder="https://codeforces.com/..."
+										placeholder="https://vjudge.net/..."
 									/>
 								</div>
 								<div className="grid grid-cols-2 gap-4">
@@ -351,7 +351,7 @@ export function ProblemsPage() {
 			/>
 
 			{/* Table */}
-			{isLoading ? (
+			{isLoading && !problems ? (
 				<div className="space-y-2">
 					{Array.from({ length: 5 }).map((_, i) => (
 						<Skeleton key={i} className="h-12 w-full" />
