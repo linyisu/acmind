@@ -72,6 +72,14 @@ describe("useVJudgeImportListener", () => {
 					timestamp: Date.now(),
 				},
 			});
+			// Duplicate within 1s should be ignored
+			handler?.({
+				payload: {
+					action: "submissions",
+					detail: "1 imported",
+					timestamp: Date.now() + 200,
+				},
+			});
 		});
 
 		await waitFor(() => expect(problemsQuery).toHaveBeenCalledTimes(2));

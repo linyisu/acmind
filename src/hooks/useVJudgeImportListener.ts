@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 interface ImportEvent {
@@ -22,6 +22,10 @@ let nextId = 0;
 export function useVJudgeImportListener() {
 	const queryClient = useQueryClient();
 	const [notifications, setNotifications] = useState<ImportNotification[]>([]);
+	const lastNotificationRef = useRef<{
+		message: string;
+		timestamp: number;
+	} | null>(null);
 
 	const dismiss = useCallback((id: number) => {
 		setNotifications((prev) => prev.filter((n) => n.id !== id));
@@ -34,13 +38,20 @@ export function useVJudgeImportListener() {
 			try {
 				const { listen } = await import("@tauri-apps/api/event");
 				unlisten = await listen<ImportEvent>("vjudge-imported", (event) => {
-					const { action, detail } = event.payload;
+					const { action, detail, timestamp } = event.payload;
+					const message = `${action}: ${detail}`;
+					const lastNotification = lastNotificationRef.current;
+					if (
+						lastNotification?.message === message &&
+						timestamp - lastNotification.timestamp < 1000
+					) {
+						return;
+					}
+
+					lastNotificationRef.current = { message, timestamp };
 					const id = nextId++;
 
-					setNotifications((prev) => [
-						...prev.slice(-4),
-						{ id, message: `${action}: ${detail}` },
-					]);
+					setNotifications((prev) => [...prev.slice(-4), { id, message }]);
 
 					setTimeout(() => dismiss(id), 5000);
 
