@@ -80,6 +80,14 @@ function markdownComponents() {
 				{children}
 			</a>
 		),
+		img: ({ src, alt }: { src?: string; alt?: string }) => (
+			<img
+				src={src}
+				alt={alt ?? ""}
+				className="my-3 max-w-full rounded-md border bg-background"
+				loading="lazy"
+			/>
+		),
 	};
 }
 

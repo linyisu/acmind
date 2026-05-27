@@ -6,6 +6,7 @@
 	"use strict";
 
 	const VJUDGE_ORIGIN = "https://vjudge.net";
+	const VJUDGE_CDN_ORIGIN = "https://cdn.vjudge.net.cn";
 	const PAGE_SIZE = 20;
 
 	// ---- Messaging ----
@@ -500,6 +501,12 @@
 	function stripHtml(html) {
 		if (!html) return "";
 		return html
+			.replace(/<img\b([^>]*)>/gi, (_match, attrs) => {
+				const src = extractHtmlAttr(attrs, "src");
+				if (!src) return "";
+				const alt = extractHtmlAttr(attrs, "alt") || "image";
+				return `\n![${alt}](${normalizeAssetUrl(src)})\n`;
+			})
 			.replace(/<pre[^>]*>/g, "\n```text\n")
 			.replace(/<\/pre>/g, "\n```\n")
 			.replace(/<br\s*\/?>/g, "\n")
@@ -512,6 +519,21 @@
 			.replace(/&nbsp;/g, " ")
 			.replace(/\n{3,}/g, "\n\n")
 			.trim();
+	}
+
+	function extractHtmlAttr(attrs, name) {
+		const match = attrs.match(new RegExp(`${name}=["']([^"']+)["']`, "i"));
+		return match?.[1] || null;
+	}
+
+	function normalizeAssetUrl(src) {
+		if (src.startsWith("CDN_BASE_URL/")) {
+			return `${VJUDGE_CDN_ORIGIN}/${src.slice("CDN_BASE_URL/".length)}`;
+		}
+		if (src.startsWith("http://") || src.startsWith("https://")) return src;
+		if (src.startsWith("//")) return `https:${src}`;
+		if (src.startsWith("/")) return `${VJUDGE_ORIGIN}${src}`;
+		return `${VJUDGE_ORIGIN}/${src}`;
 	}
 
 	function sleep(ms) {

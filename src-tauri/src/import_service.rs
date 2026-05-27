@@ -6,6 +6,8 @@ use sqlx::SqlitePool;
 use std::sync::Arc;
 use tokio::runtime::Handle;
 
+const VJUDGE_CDN_ORIGIN: &str = "https://cdn.vjudge.net.cn";
+
 pub type ImportNotifier = Arc<dyn Fn(&str, &str) + Send + Sync>;
 
 #[derive(Debug, Serialize)]
@@ -236,9 +238,10 @@ pub fn import_problem(state: &ImportState, payload: &ImportProblemPayload) -> Re
 
     if let Some(problem) = existing {
         if let Some(ref statement) = payload.statement {
+            let statement = normalize_statement_asset_urls(statement);
             let statement_path = state
                 .storage
-                .save_statement(&problem.id, statement)
+                .save_statement(&problem.id, &statement)
                 .map_err(|e| format!("Failed to save problem statement: {}", e))?;
             state
                 .block_on(repo::update_problem(
@@ -262,10 +265,11 @@ pub fn import_problem(state: &ImportState, payload: &ImportProblemPayload) -> Re
     }
 
     let statement_path = if let Some(ref statement) = payload.statement {
+        let statement = normalize_statement_asset_urls(statement);
         Some(
             state
                 .storage
-                .save_statement(&source_problem_id, statement)
+                .save_statement(&source_problem_id, &statement)
                 .map_err(|e| format!("Failed to save problem statement: {}", e))?,
         )
     } else {
@@ -291,6 +295,10 @@ pub fn import_problem(state: &ImportState, payload: &ImportProblemPayload) -> Re
     state.notify_imported("problem", &format!("Created {}", source_problem_id));
 
     Ok(true)
+}
+
+fn normalize_statement_asset_urls(statement: &str) -> String {
+    statement.replace("CDN_BASE_URL/", &format!("{}/", VJUDGE_CDN_ORIGIN))
 }
 
 pub fn import_submission(

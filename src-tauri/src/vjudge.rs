@@ -886,6 +886,8 @@ async fn fetch_text(
     )))
 }
 
+const VJUDGE_CDN_ORIGIN: &str = "https://cdn.vjudge.net.cn";
+
 fn extract_problem_page_data(html: &str) -> Result<VJudgeProblemPageData, AppError> {
     let json = extract_textarea(html, "name=\"dataJson\"")
         .or_else(|| extract_textarea(html, "name='dataJson'"))
@@ -998,6 +1000,7 @@ fn extract_title(html: &str, source_problem_id: &str) -> Option<String> {
 
 fn html_fragment_to_markdown(input: &str) -> String {
     let mut output = decode_html_entities(input);
+    output = replace_images(&output);
     output = replace_pre_blocks(&output);
     output = replace_sample_table(&output);
     output = output
@@ -1016,6 +1019,52 @@ fn html_fragment_to_markdown(input: &str) -> String {
     output = output.replace("<li>", "- ").replace("</li>", "\n");
     output = strip_html_tags(&output);
     normalize_markdown(&output)
+}
+
+fn replace_images(input: &str) -> String {
+    let mut output = String::new();
+    let mut rest = input;
+    while let Some(start) = rest.find("<img") {
+        output.push_str(&rest[..start]);
+        let Some(end) = rest[start..].find('>') else {
+            output.push_str(&rest[start..]);
+            return output;
+        };
+        let tag = &rest[start..start + end + 1];
+        if let Some(src) = extract_attr(tag, "src") {
+            let alt = extract_attr(tag, "alt").unwrap_or_else(|| "image".into());
+            output.push_str(&format!("\n![{}]({})\n", alt, normalize_asset_url(&src)));
+        }
+        rest = &rest[start + end + 1..];
+    }
+    output.push_str(rest);
+    output
+}
+
+fn extract_attr(tag: &str, name: &str) -> Option<String> {
+    for quote in ['"', '\''] {
+        let marker = format!("{}={}", name, quote);
+        if let Some(start) = tag.find(&marker) {
+            let value_start = start + marker.len();
+            let value_end = tag[value_start..].find(quote)? + value_start;
+            return Some(tag[value_start..value_end].to_string());
+        }
+    }
+    None
+}
+
+fn normalize_asset_url(src: &str) -> String {
+    if let Some(path) = src.strip_prefix("CDN_BASE_URL/") {
+        format!("{}/{}", VJUDGE_CDN_ORIGIN, path)
+    } else if src.starts_with("http://") || src.starts_with("https://") {
+        src.to_string()
+    } else if src.starts_with("//") {
+        format!("https:{}", src)
+    } else if src.starts_with('/') {
+        format!("https://vjudge.net{}", src)
+    } else {
+        format!("https://vjudge.net/{}", src)
+    }
 }
 
 fn replace_sample_table(input: &str) -> String {
