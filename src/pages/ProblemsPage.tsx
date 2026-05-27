@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { Plus, Trash2, ExternalLink, Download } from "lucide-react";
+import { Plus, Trash2, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -75,10 +75,6 @@ export function ProblemsPage() {
 
 	const [search, setSearch] = useState("");
 	const [dialogOpen, setDialogOpen] = useState(false);
-	const [vjudgeDialogOpen, setVjudgeDialogOpen] = useState(false);
-	const [vjudgeUrl, setVjudgeUrl] = useState("");
-	const [vjudgeMessage, setVjudgeMessage] = useState("");
-	const [vjudgeError, setVjudgeError] = useState("");
 	const [form, setForm] = useState({
 		title: "",
 		source: "",
@@ -132,32 +128,6 @@ export function ProblemsPage() {
 		},
 	});
 
-	const importVjudgeMutation = useMutation({
-		mutationFn: async () => {
-			setVjudgeError("");
-			setVjudgeMessage("");
-			const { invoke } = await import("@tauri-apps/api/core");
-			return invoke<{
-				problem: Problem;
-				statement_imported: boolean;
-				source_synced: boolean;
-			}>("import_vjudge_problem", { url: vjudgeUrl });
-		},
-		onSuccess: (result) => {
-			queryClient.invalidateQueries({ queryKey: ["problems"] });
-			setVjudgeMessage(
-				`已导入 ${result.problem.title}，题面已保存${
-					result.source_synced ? "，源码已保存" : ""
-				}。`,
-			);
-		},
-		onError: (err) => {
-			setVjudgeError(
-				err instanceof Error ? err.message : "导入 VJudge 题目失败",
-			);
-		},
-	});
-
 	const filtered = problems?.filter(
 		(p) =>
 			p.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -176,59 +146,6 @@ export function ProblemsPage() {
 				</div>
 
 				<div className="flex gap-2">
-					<Dialog open={vjudgeDialogOpen} onOpenChange={setVjudgeDialogOpen}>
-						<DialogTrigger asChild>
-							<Button variant="outline">
-								<Download className="mr-2 h-4 w-4" />
-								导入 VJudge
-							</Button>
-						</DialogTrigger>
-						<DialogContent className="sm:max-w-lg">
-							<DialogHeader>
-								<DialogTitle>导入 VJudge 单题</DialogTitle>
-							</DialogHeader>
-							<div className="grid gap-4 py-4">
-								<div className="grid gap-2">
-									<Label htmlFor="vjudgeUrl">VJudge 题目链接</Label>
-									<Input
-										id="vjudgeUrl"
-										value={vjudgeUrl}
-										onChange={(event) => setVjudgeUrl(event.target.value)}
-										placeholder="https://vjudge.net/problem/%E6%B4%9B%E8%B0%B7-P1540"
-									/>
-									<p className="text-xs text-muted-foreground">
-										优先使用题目链接，例如
-										洛谷-P1540；提交链接仅用于需要同时导入源码时。
-									</p>
-								</div>
-								{vjudgeError && (
-									<p className="rounded-md bg-destructive/10 p-2 text-sm text-destructive">
-										{vjudgeError}
-									</p>
-								)}
-								{vjudgeMessage && (
-									<p className="rounded-md bg-success/10 p-2 text-sm text-success">
-										{vjudgeMessage}
-									</p>
-								)}
-							</div>
-							<div className="flex justify-end gap-2">
-								<Button
-									variant="outline"
-									onClick={() => setVjudgeDialogOpen(false)}
-								>
-									{t("common.cancel")}
-								</Button>
-								<Button
-									onClick={() => importVjudgeMutation.mutate()}
-									disabled={!vjudgeUrl.trim() || importVjudgeMutation.isPending}
-								>
-									{importVjudgeMutation.isPending ? "导入中..." : "导入"}
-								</Button>
-							</div>
-						</DialogContent>
-					</Dialog>
-
 					<Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
 						<DialogTrigger asChild>
 							<Button>

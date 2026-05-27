@@ -9,7 +9,6 @@ import {
 	FileText,
 	Sparkles,
 	Loader2,
-	Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -127,6 +126,9 @@ export function ProblemDetailPage() {
 	// Code viewer state
 	const [codeViewerOpen, setCodeViewerOpen] = useState(false);
 	const [codeViewerSubId, setCodeViewerSubId] = useState<string | null>(null);
+
+	// Delete confirmation state
+	const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
 	const { data: viewedSubmission, isFetching: codeLoading } = useQuery({
 		queryKey: ["submission-code", codeViewerSubId],
@@ -645,7 +647,14 @@ export function ProblemDetailPage() {
 							</TableHeader>
 							<TableBody>
 								{submissions.map((sub) => (
-									<TableRow key={sub.id}>
+									<TableRow
+										key={sub.id}
+										className="cursor-pointer hover:bg-muted/50"
+										onClick={() => {
+											setCodeViewerSubId(sub.id);
+											setCodeViewerOpen(true);
+										}}
+									>
 										<TableCell>
 											<Badge variant={statusColors[sub.status] ?? "secondary"}>
 												{sub.status}
@@ -665,28 +674,16 @@ export function ProblemDetailPage() {
 											{new Date(sub.submitted_at).toLocaleDateString()}
 										</TableCell>
 										<TableCell>
-											<div className="flex items-center gap-1">
-												<button
-													onClick={() => {
-														setCodeViewerSubId(sub.id);
-														setCodeViewerOpen(true);
-													}}
-													className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted"
-													title="查看代码"
-												>
-													<Eye className="h-4 w-4" />
-												</button>
-												<button
-													onClick={() => {
-														if (confirm("Delete this submission?")) {
-															deleteSub.mutate(sub.id);
-														}
-													}}
-													className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-destructive/10 text-destructive"
-												>
-													<Trash2 className="h-4 w-4" />
-												</button>
-											</div>
+											<button
+												onClick={(e) => {
+													e.stopPropagation();
+													setDeleteConfirmId(sub.id);
+												}}
+												className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-destructive/10 text-destructive"
+												title="Delete submission"
+											>
+												<Trash2 className="h-4 w-4" />
+											</button>
 										</TableCell>
 									</TableRow>
 								))}
@@ -813,6 +810,39 @@ export function ProblemDetailPage() {
 					)}
 				</TabsContent>
 			</Tabs>
+
+			{/* Delete confirmation dialog */}
+			<Dialog
+				open={deleteConfirmId !== null}
+				onOpenChange={(open) => !open && setDeleteConfirmId(null)}
+			>
+				<DialogContent className="sm:max-w-sm">
+					<DialogHeader>
+						<DialogTitle>Delete Submission</DialogTitle>
+					</DialogHeader>
+					<p className="text-sm text-muted-foreground">
+						Are you sure you want to delete this submission? This action cannot
+						be undone.
+					</p>
+					<div className="flex justify-end gap-2">
+						<Button variant="outline" onClick={() => setDeleteConfirmId(null)}>
+							Cancel
+						</Button>
+						<Button
+							variant="destructive"
+							onClick={() => {
+								if (deleteConfirmId) {
+									deleteSub.mutate(deleteConfirmId);
+									setDeleteConfirmId(null);
+								}
+							}}
+							disabled={deleteSub.isPending}
+						>
+							{deleteSub.isPending ? "Deleting..." : "Delete"}
+						</Button>
+					</div>
+				</DialogContent>
+			</Dialog>
 
 			{/* Code viewer dialog */}
 			<Dialog open={codeViewerOpen} onOpenChange={setCodeViewerOpen}>
