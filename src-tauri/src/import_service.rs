@@ -1,4 +1,4 @@
-use crate::db::models::{CreateProblemInput, CreateSubmissionInput};
+use crate::db::models::{CreateProblemInput, CreateSubmissionInput, UpdateProblemInput};
 use crate::db::repo;
 use crate::storage::Storage;
 use serde::{Deserialize, Serialize};
@@ -234,12 +234,45 @@ pub fn import_problem(state: &ImportState, payload: &ImportProblemPayload) -> Re
         ))
         .map_err(|e| format!("DB error: {}", e))?;
 
-    if existing.is_some() {
+    if let Some(problem) = existing {
+        if let Some(ref statement) = payload.statement {
+            let statement_path = state
+                .storage
+                .save_statement(&problem.id, statement)
+                .map_err(|e| format!("Failed to save problem statement: {}", e))?;
+            state
+                .block_on(repo::update_problem(
+                    &state.pool,
+                    &problem.id,
+                    &UpdateProblemInput {
+                        source: None,
+                        source_problem_id: None,
+                        title: Some(payload.title.clone()),
+                        url: payload.url.clone(),
+                        difficulty: None,
+                        tags: Some(payload.tags.clone()),
+                        statement: None,
+                    },
+                    Some(&statement_path),
+                ))
+                .map_err(|e| format!("Failed to update problem statement: {}", e))?;
+        }
         state.notify_imported("problem", &format!("Updated {}", source_problem_id));
         return Ok(false);
     }
 
-    let problem = state
+    let statement_path = if let Some(ref statement) = payload.statement {
+        Some(
+            state
+                .storage
+                .save_statement(&source_problem_id, statement)
+                .map_err(|e| format!("Failed to save problem statement: {}", e))?,
+        )
+    } else {
+        None
+    };
+
+    state
         .block_on(repo::create_problem(
             &state.pool,
             &CreateProblemInput {
@@ -251,13 +284,9 @@ pub fn import_problem(state: &ImportState, payload: &ImportProblemPayload) -> Re
                 tags: payload.tags.clone(),
                 statement: None,
             },
-            None,
+            statement_path.as_deref(),
         ))
         .map_err(|e| format!("Failed to create problem: {}", e))?;
-
-    if let Some(ref statement) = payload.statement {
-        let _ = state.storage.save_statement(&problem.id, statement);
-    }
 
     state.notify_imported("problem", &format!("Created {}", source_problem_id));
 
