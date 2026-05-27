@@ -29,7 +29,7 @@ pub fn start_import_server(
     storage: Storage,
     app_handle: tauri::AppHandle,
 ) -> ImportServerHandle {
-    let rt = tokio::runtime::Builder::new_current_thread()
+    let rt = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()
         .expect("Failed to create Tokio runtime for import server");
@@ -57,7 +57,7 @@ pub fn start_import_server(
     let import_handle = ImportServerHandle::new();
 
     thread::spawn(move || {
-        let _guard = rt.enter();
+        let _rt = rt;
         for request in server.incoming_requests() {
             let state = Arc::clone(&state);
             thread::spawn(move || handle_request(state, request));

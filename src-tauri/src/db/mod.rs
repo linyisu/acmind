@@ -16,7 +16,12 @@ pub async fn init_db(app_data_dir: &PathBuf) -> Result<SqlitePool, sqlx::Error> 
         .max_connections(8)
         .after_connect(|conn, _meta| {
             Box::pin(async move {
-                // SQLite requires explicit PRAGMA to enforce foreign keys
+                sqlx::query("PRAGMA journal_mode = WAL")
+                    .execute(&mut *conn)
+                    .await?;
+                sqlx::query("PRAGMA busy_timeout = 5000")
+                    .execute(&mut *conn)
+                    .await?;
                 sqlx::query("PRAGMA foreign_keys = ON")
                     .execute(conn)
                     .await?;
