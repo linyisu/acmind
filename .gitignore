@@ -43,3 +43,7 @@ pnpm-debug.log*
 *.njsproj
 *.sln
 *.sw?
+
+# Playwright MCP
+.playwright-mcp/
+*.tsbuildinfo

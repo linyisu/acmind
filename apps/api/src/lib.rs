@@ -11,6 +11,7 @@ pub mod submission;
 pub mod tag;
 
 use axum::{middleware, Router};
+use tower_http::cors::{Any, CorsLayer};
 use tower_http::trace::TraceLayer;
 
 pub fn build_router(state: state::AppState) -> Router {
@@ -31,6 +32,12 @@ pub fn build_router(state: state::AppState) -> Router {
     Router::new()
         .merge(health::router())
         .nest("/api/v1", api_v1)
+        .layer(
+            CorsLayer::new()
+                .allow_origin(Any)
+                .allow_methods(Any)
+                .allow_headers(Any),
+        )
         .layer(TraceLayer::new_for_http())
         .with_state(state)
 }
