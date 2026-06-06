@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    network_mode: host
+    environment:
+      POSTGRES_USER: acmind
+      POSTGRES_PASSWORD: acmind
+      POSTGRES_DB: acmind
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U acmind -h localhost"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # api 和 web 后续 Phase 添加
+
+volumes:
+  postgres_data:
