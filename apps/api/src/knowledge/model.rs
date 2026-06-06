@@ -51,15 +51,3 @@ pub struct KnowledgeResp {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
-
-#[derive(Debug, Clone)]
-pub struct KnowledgeRow {
-    pub id: i64,
-    pub user_id: i64,
-    pub problem_id: Option<i64>,
-    pub kind: String,
-    pub title: String,
-    pub content: String,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
-}

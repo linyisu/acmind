@@ -2,6 +2,7 @@ pub mod analysis;
 pub mod auth;
 pub mod config;
 pub mod db;
+pub mod entity;
 pub mod error;
 pub mod health;
 pub mod knowledge;

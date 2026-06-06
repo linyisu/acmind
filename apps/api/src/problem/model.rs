@@ -37,17 +37,3 @@ pub struct ProblemResp {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
-
-#[derive(Debug, Clone)]
-pub struct ProblemRow {
-    pub id: i64,
-    pub user_id: i64,
-    pub source: String,
-    pub external_id: Option<String>,
-    pub title: String,
-    pub url: Option<String>,
-    pub difficulty: Option<i32>,
-    pub statement: Option<String>,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
-}

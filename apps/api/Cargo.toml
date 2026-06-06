@@ -23,6 +23,8 @@ sea-orm = { version = "1.1", features = [
   "runtime-tokio-rustls",
   "macros",
 ] }
+sea-orm-migration = { workspace = true }
+acmind-migration = { path = "migration" }
 
 # 序列化
 serde = { version = "1", features = ["derive"] }

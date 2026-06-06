@@ -1,0 +1,22 @@
+[package]
+name = "acmind-migration"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lib]
+name = "acmind_migration"
+path = "src/lib.rs"
+
+[[bin]]
+name = "migration"
+path = "src/main.rs"
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+sea-orm-migration = { version = "1.1", features = [
+  "sqlx-postgres",
+  "runtime-tokio-rustls",
+] }
+async-trait = "0.1"

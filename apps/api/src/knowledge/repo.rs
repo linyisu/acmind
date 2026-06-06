@@ -1,6 +1,12 @@
-use crate::{error::AppResult, knowledge::model::KnowledgeRow};
+use crate::{
+    entity::{knowledge, knowledge_tag, tag},
+    error::{AppError, AppResult},
+};
 use chrono::Utc;
-use sea_orm::{ConnectionTrait, DatabaseConnection, DbBackend, Statement};
+use sea_orm::{
+    ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, ModelTrait, QueryFilter,
+    QueryOrder, Set,
+};
 
 pub async fn insert(
     db: &DatabaseConnection,
@@ -9,61 +15,63 @@ pub async fn insert(
     kind: &str,
     title: &str,
     content: &str,
-) -> AppResult<KnowledgeRow> {
+    tag_ids: &[i64],
+) -> AppResult<knowledge::Model> {
     let now = Utc::now();
-    let stmt = Statement::from_string(
-        DbBackend::Postgres,
-        format!(
-            r#"INSERT INTO knowledge (user_id, problem_id, kind, title, content, created_at, updated_at)
-               VALUES ({}, {}, '{}', '{}', '{}', '{}', '{}')
-               RETURNING id, user_id, problem_id, kind, title, content, created_at, updated_at"#,
-            user_id,
-            opt_i64(problem_id),
-            esc(kind),
-            esc(title),
-            esc(content),
-            now.to_rfc3339(),
-            now.to_rfc3339(),
-        ),
-    );
-    let row = db
-        .query_one(stmt)
-        .await?
-        .ok_or_else(|| crate::error::AppError::Internal("knowledge insert returned no row".into()))?;
-    row_to_knowledge(row).ok_or_else(|| crate::error::AppError::Internal("knowledge row parse".into()))
+    let am = knowledge::ActiveModel {
+        user_id: Set(user_id),
+        problem_id: Set(problem_id),
+        kind: Set(kind.to_string()),
+        title: Set(title.to_string()),
+        content: Set(content.to_string()),
+        created_at: Set(now.into()),
+        updated_at: Set(now.into()),
+        ..Default::default()
+    };
+    let row = am.insert(db).await?;
+
+    for tag_id in tag_ids {
+        knowledge_tag::ActiveModel {
+            knowledge_id: Set(row.id),
+            tag_id: Set(*tag_id),
+        }
+        .insert(db)
+        .await
+        .map_err(|e| match e {
+            sea_orm::DbErr::RecordNotInserted => AppError::Internal("link tag".into()),
+            other => AppError::from(other),
+        })?;
+    }
+    Ok(row)
 }
 
 pub async fn find_by_id(
     db: &DatabaseConnection,
     user_id: i64,
     id: i64,
-) -> AppResult<Option<KnowledgeRow>> {
-    let stmt = Statement::from_string(
-        DbBackend::Postgres,
-        format!(
-            r#"SELECT id, user_id, problem_id, kind, title, content, created_at, updated_at
-               FROM knowledge WHERE id = {} AND user_id = {}"#,
-            id, user_id
-        ),
-    );
-    let row = db.query_one(stmt).await?;
-    Ok(row.and_then(row_to_knowledge))
+) -> AppResult<Option<knowledge::Model>> {
+    Ok(knowledge::Entity::find_by_id(id)
+        .filter(knowledge::Column::UserId.eq(user_id))
+        .one(db)
+        .await?)
 }
 
 pub async fn list_by_user(
     db: &DatabaseConnection,
     user_id: i64,
-) -> AppResult<Vec<KnowledgeRow>> {
-    let stmt = Statement::from_string(
-        DbBackend::Postgres,
-        format!(
-            r#"SELECT id, user_id, problem_id, kind, title, content, created_at, updated_at
-               FROM knowledge WHERE user_id = {} ORDER BY id DESC"#,
-            user_id
-        ),
-    );
-    let rows = db.query_all(stmt).await?;
-    Ok(rows.into_iter().filter_map(row_to_knowledge).collect())
+) -> AppResult<Vec<(knowledge::Model, Vec<tag::Model>)>> {
+    let rows = knowledge::Entity::find()
+        .filter(knowledge::Column::UserId.eq(user_id))
+        .order_by_desc(knowledge::Column::Id)
+        .all(db)
+        .await?;
+
+    let mut out = Vec::with_capacity(rows.len());
+    for k in rows {
+        let tags = k.find_related(tag::Entity).all(db).await?;
+        out.push((k, tags));
+    }
+    Ok(out)
 }
 
 pub async fn update(
@@ -74,97 +82,51 @@ pub async fn update(
     kind: Option<&str>,
     title: Option<&str>,
     content: Option<&str>,
-) -> AppResult<Option<KnowledgeRow>> {
-    let mut sets: Vec<String> = vec![];
-    if let Some(p) = problem_id { sets.push(format!("problem_id = {}", p)); }
-    if let Some(k) = kind { sets.push(format!("kind = '{}'", esc(k))); }
-    if let Some(t) = title { sets.push(format!("title = '{}'", esc(t))); }
-    if let Some(c) = content { sets.push(format!("content = '{}'", esc(c))); }
-    if sets.is_empty() { return find_by_id(db, user_id, id).await; }
-    let now = Utc::now();
-    sets.push(format!("updated_at = '{}'", now.to_rfc3339()));
-    let stmt = Statement::from_string(
-        DbBackend::Postgres,
-        format!(
-            r#"UPDATE knowledge SET {} WHERE id = {} AND user_id = {}
-               RETURNING id, user_id, problem_id, kind, title, content, created_at, updated_at"#,
-            sets.join(", "), id, user_id
-        ),
-    );
-    let row = db.query_one(stmt).await?;
-    Ok(row.and_then(row_to_knowledge))
+) -> AppResult<Option<knowledge::Model>> {
+    let existing = match find_by_id(db, user_id, id).await? {
+        Some(p) => p,
+        None => return Ok(None),
+    };
+
+    let mut am: knowledge::ActiveModel = existing.into();
+    if let Some(p) = problem_id { am.problem_id = Set(Some(p)); }
+    if let Some(k) = kind { am.kind = Set(k.to_string()); }
+    if let Some(t) = title { am.title = Set(t.to_string()); }
+    if let Some(c) = content { am.content = Set(c.to_string()); }
+    am.updated_at = Set(Utc::now().into());
+
+    Ok(Some(am.update(db).await?))
 }
 
-pub async fn delete(db: &DatabaseConnection, user_id: i64, id: i64) -> AppResult<bool> {
-    let stmt = Statement::from_string(
-        DbBackend::Postgres,
-        format!("DELETE FROM knowledge WHERE id = {} AND user_id = {}", id, user_id),
-    );
-    let res = db.execute(stmt).await?;
-    Ok(res.rows_affected() > 0)
-}
-
-pub async fn link_knowledge_tag(
-    db: &DatabaseConnection,
-    knowledge_id: i64,
-    tag_id: i64,
-) -> AppResult<()> {
-    let stmt = Statement::from_string(
-        DbBackend::Postgres,
-        format!(
-            "INSERT INTO knowledge_tag (knowledge_id, tag_id) VALUES ({}, {}) ON CONFLICT DO NOTHING",
-            knowledge_id, tag_id
-        ),
-    );
-    db.execute(stmt).await?;
-    Ok(())
-}
-
-pub async fn replace_knowledge_tags(
+pub async fn replace_tags(
     db: &DatabaseConnection,
     knowledge_id: i64,
     tag_ids: &[i64],
 ) -> AppResult<()> {
-    let del = Statement::from_string(
-        DbBackend::Postgres,
-        format!("DELETE FROM knowledge_tag WHERE knowledge_id = {}", knowledge_id),
-    );
-    db.execute(del).await?;
+    knowledge_tag::Entity::delete_many()
+        .filter(knowledge_tag::Column::KnowledgeId.eq(knowledge_id))
+        .exec(db)
+        .await?;
     for tag_id in tag_ids {
-        link_knowledge_tag(db, knowledge_id, *tag_id).await?;
+        knowledge_tag::ActiveModel {
+            knowledge_id: Set(knowledge_id),
+            tag_id: Set(*tag_id),
+        }
+        .insert(db)
+        .await
+        .map_err(|e| match e {
+            sea_orm::DbErr::RecordNotInserted => AppError::Internal("link tag".into()),
+            other => AppError::from(other),
+        })?;
     }
     Ok(())
 }
 
-pub async fn fetch_knowledge_tag_ids(
-    db: &DatabaseConnection,
-    knowledge_id: i64,
-) -> AppResult<Vec<i64>> {
-    let stmt = Statement::from_string(
-        DbBackend::Postgres,
-        format!(
-            "SELECT tag_id FROM knowledge_tag WHERE knowledge_id = {} ORDER BY tag_id",
-            knowledge_id
-        ),
-    );
-    let rows = db.query_all(stmt).await?;
-    Ok(rows.into_iter().filter_map(|r| r.try_get_by::<i64, _>("tag_id").ok()).collect())
-}
-
-pub fn row_to_knowledge(row: sea_orm::QueryResult) -> Option<KnowledgeRow> {
-    Some(KnowledgeRow {
-        id: row.try_get_by::<i64, _>("id").ok()?,
-        user_id: row.try_get_by::<i64, _>("user_id").ok()?,
-        problem_id: row.try_get_by::<Option<i64>, _>("problem_id").ok()?,
-        kind: row.try_get_by::<String, _>("kind").ok()?,
-        title: row.try_get_by::<String, _>("title").ok()?,
-        content: row.try_get_by::<String, _>("content").ok()?,
-        created_at: row.try_get_by::<chrono::DateTime<chrono::Utc>, _>("created_at").ok()?,
-        updated_at: row.try_get_by::<chrono::DateTime<chrono::Utc>, _>("updated_at").ok()?,
-    })
-}
-
-fn esc(s: &str) -> String { s.replace('\'', "''") }
-fn opt_i64(v: Option<i64>) -> String {
-    match v { Some(n) => n.to_string(), None => "NULL".to_string() }
+pub async fn delete(db: &DatabaseConnection, user_id: i64, id: i64) -> AppResult<bool> {
+    let res = knowledge::Entity::delete_many()
+        .filter(knowledge::Column::Id.eq(id))
+        .filter(knowledge::Column::UserId.eq(user_id))
+        .exec(db)
+        .await?;
+    Ok(res.rows_affected > 0)
 }
