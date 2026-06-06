@@ -145,7 +145,7 @@ export default function ProblemFormPage() {
           <div className="space-y-1.5">
             <Label>Statement</Label>
             <textarea
-              className="flex min-h-24 w-full rounded-md border border-[var(--color-input)] bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
+              className="flex min-h-24 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               value={statement}
               onChange={(e) => setStatement(e.target.value)}
             />
@@ -174,7 +174,7 @@ export default function ProblemFormPage() {
                 return (
                   <span
                     key={tid}
-                    className="inline-flex items-center rounded-md bg-[var(--color-accent)] px-2 py-0.5 text-xs"
+                    className="inline-flex items-center rounded-md bg-accent px-2 py-0.5 text-xs"
                   >
                     {t?.name ?? tid}
                     <button
@@ -189,7 +189,7 @@ export default function ProblemFormPage() {
               })}
             </div>
           </div>
-          {error && <p className="text-sm text-[var(--color-destructive)]">{error}</p>}
+          {error && <p className="text-sm text-destructive">{error}</p>}
           <div className="flex justify-end gap-2">
             <Button type="button" variant="ghost" onClick={() => navigate("/problems")}>
               Cancel

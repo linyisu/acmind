@@ -146,7 +146,7 @@ export default function KnowledgeListPage() {
               <div className="space-y-1.5">
                 <Label>Content</Label>
                 <textarea
-                  className="flex min-h-32 w-full rounded-md border border-[var(--color-input)] bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
+                  className="flex min-h-32 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
                   required
@@ -176,7 +176,7 @@ export default function KnowledgeListPage() {
                     return (
                       <span
                         key={tid}
-                        className="inline-flex items-center rounded-md bg-[var(--color-accent)] px-2 py-0.5 text-xs"
+                        className="inline-flex items-center rounded-md bg-accent px-2 py-0.5 text-xs"
                       >
                         {t?.name ?? tid}
                         <button
@@ -221,7 +221,7 @@ export default function KnowledgeListPage() {
             ))}
           </div>
         ) : (
-          <p className="text-[var(--color-muted-foreground)]">No knowledge entries yet.</p>
+          <p className="text-muted-foreground">No knowledge entries yet.</p>
         )}
       </CardContent>
     </Card>
@@ -242,11 +242,11 @@ function KnowledgeRow({
   const tagNames = k.tag_ids.map((id) => tags.find((t) => t.id === id)?.name).filter(Boolean) as string[];
   const linked = k.problem_id ? problems.find((p) => p.id === k.problem_id)?.title : null;
   return (
-    <div className="rounded-md border border-[var(--color-border)] p-4 space-y-2">
+    <div className="rounded-md border border-border p-4 space-y-2">
       <div className="flex items-start justify-between gap-2">
         <div>
           <h3 className="font-medium">{k.title}</h3>
-          <p className="text-xs text-[var(--color-muted-foreground)]">
+          <p className="text-xs text-muted-foreground">
             <Badge variant="outline" className="mr-2">
               {k.kind}
             </Badge>

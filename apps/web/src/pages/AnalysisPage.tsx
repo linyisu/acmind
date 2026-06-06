@@ -75,7 +75,7 @@ export default function AnalysisPage() {
           </CardHeader>
           <CardContent>
             {verdictData.length === 0 ? (
-              <p className="text-[var(--color-muted-foreground)]">No data yet.</p>
+              <p className="text-muted-foreground">No data yet.</p>
             ) : (
               <ResponsiveContainer width="100%" height={280}>
                 <BarChart data={verdictData}>
@@ -84,7 +84,7 @@ export default function AnalysisPage() {
                   <YAxis allowDecimals={false} />
                   <Tooltip />
                   <Legend />
-                  <Bar dataKey="value" fill="var(--color-primary)" />
+                  <Bar dataKey="value" fill="var(--primary)" />
                 </BarChart>
               </ResponsiveContainer>
             )}
@@ -107,12 +107,12 @@ export default function AnalysisPage() {
                   <YAxis allowDecimals={false} />
                   <Tooltip />
                   <Legend />
-                  <Line type="monotone" dataKey="count" stroke="var(--color-primary)" />
+                  <Line type="monotone" dataKey="count" stroke="var(--primary)" />
                   <Line type="monotone" dataKey="ac_count" stroke="#22c55e" />
                 </LineChart>
               </ResponsiveContainer>
             ) : (
-              <p className="text-[var(--color-muted-foreground)]">No data yet.</p>
+              <p className="text-muted-foreground">No data yet.</p>
             )}
           </CardContent>
         </Card>
@@ -134,12 +134,12 @@ export default function AnalysisPage() {
                 <YAxis allowDecimals={false} />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="count" fill="var(--color-primary)" />
+                <Bar dataKey="count" fill="var(--primary)" />
                 <Bar dataKey="ac_count" fill="#22c55e" />
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <p className="text-[var(--color-muted-foreground)]">No data yet.</p>
+            <p className="text-muted-foreground">No data yet.</p>
           )}
         </CardContent>
       </Card>

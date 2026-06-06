@@ -91,7 +91,7 @@ export default function ProblemsListPage() {
             </TableBody>
           </Table>
         ) : (
-          <p className="text-[var(--color-muted-foreground)]">No problems yet.</p>
+          <p className="text-muted-foreground">No problems yet.</p>
         )}
       </CardContent>
     </Card>

@@ -162,7 +162,7 @@ export default function SubmissionsListPage() {
               <div className="space-y-1.5">
                 <Label>Code</Label>
                 <textarea
-                  className="flex min-h-32 w-full rounded-md border border-[var(--color-input)] bg-transparent px-3 py-2 text-sm font-mono shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
+                  className="flex min-h-32 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm font-mono shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
                   required
@@ -204,7 +204,7 @@ export default function SubmissionsListPage() {
                 const ptitle = problems.data?.find((p) => p.id === s.problem_id)?.title ?? `#${s.problem_id}`;
                 return (
                   <TableRow key={s.id}>
-                    <TableCell className="text-xs text-[var(--color-muted-foreground)]">
+                    <TableCell className="text-xs text-muted-foreground">
                       {new Date(s.submitted_at).toLocaleString()}
                     </TableCell>
                     <TableCell>{ptitle}</TableCell>
@@ -220,7 +220,7 @@ export default function SubmissionsListPage() {
             </TableBody>
           </Table>
         ) : (
-          <p className="text-[var(--color-muted-foreground)]">No submissions yet.</p>
+          <p className="text-muted-foreground">No submissions yet.</p>
         )}
       </CardContent>
     </Card>

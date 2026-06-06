@@ -16,7 +16,7 @@ function Protected({ children }: { children: React.ReactNode }) {
   const loading = useAuth((s) => s.loading);
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-[var(--color-muted-foreground)]">
+      <div className="min-h-screen flex items-center justify-center text-muted-foreground">
         Loading…
       </div>
     );

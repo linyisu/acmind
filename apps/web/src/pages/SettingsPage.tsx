@@ -85,7 +85,7 @@ export default function SettingsPage() {
               {tags.data.map((t) => (
                 <span
                   key={t.id}
-                  className="inline-flex items-center rounded-md bg-[var(--color-accent)] px-2 py-1 text-xs"
+                  className="inline-flex items-center rounded-md bg-accent px-2 py-1 text-xs"
                 >
                   {t.name}
                   <button
@@ -101,10 +101,10 @@ export default function SettingsPage() {
               ))}
             </div>
           ) : (
-            <p className="text-[var(--color-muted-foreground)]">No tags yet.</p>
+            <p className="text-muted-foreground">No tags yet.</p>
           )}
           {tags.data && tags.data.length > 0 && (
-            <div className="text-xs text-[var(--color-muted-foreground)]">
+            <div className="text-xs text-muted-foreground">
               <Badge variant="outline">{tags.data.length} total</Badge>
             </div>
           )}

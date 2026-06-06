@@ -1,4 +1,5 @@
 import { NavLink } from "react-router-dom";
+import { motion } from "motion/react";
 import { Home, ListChecks, GitPullRequest, BookOpen, BarChart3, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -13,26 +14,41 @@ const items = [
 
 export default function Sidebar() {
   return (
-    <aside className="w-56 border-r border-[var(--color-border)] bg-[var(--color-card)] p-4">
-      <h1 className="text-xl font-bold mb-6">ACMind</h1>
+    <aside className="w-56 border-r border-border bg-card p-4">
+      <motion.h1
+        initial={{ opacity: 0, x: -8 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.3, ease: "easeOut" }}
+        className="text-xl font-bold mb-6"
+      >
+        ACMind
+      </motion.h1>
       <nav className="space-y-1">
-        {items.map((i) => (
-          <NavLink
+        {items.map((i, idx) => (
+          <motion.div
             key={i.to}
-            to={i.to}
-            end
-            className={({ isActive }) =>
-              cn(
-                "flex items-center gap-2 px-3 py-2 rounded-md text-sm",
-                isActive
-                  ? "bg-[var(--color-accent)] text-[var(--color-accent-foreground)]"
-                  : "hover:bg-[var(--color-accent)]",
-              )
-            }
+            initial={{ opacity: 0, x: -8 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.25, delay: 0.05 + idx * 0.04, ease: "easeOut" }}
+            whileHover={{ x: 2 }}
+            whileTap={{ scale: 0.98 }}
           >
-            <i.icon className="h-4 w-4" />
-            {i.label}
-          </NavLink>
+            <NavLink
+              to={i.to}
+              end
+              className={({ isActive }) =>
+                cn(
+                  "flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors",
+                  isActive
+                    ? "bg-accent text-accent-foreground"
+                    : "hover:bg-accent",
+                )
+              }
+            >
+              <i.icon className="h-4 w-4" />
+              {i.label}
+            </NavLink>
+          </motion.div>
         ))}
       </nav>
     </aside>
