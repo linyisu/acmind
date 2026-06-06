@@ -5,6 +5,7 @@ use crate::{
 use chrono::Utc;
 use sea_orm::{ConnectionTrait, DatabaseConnection, DbBackend, Statement};
 
+#[allow(clippy::too_many_arguments)]
 pub async fn insert(
     db: &DatabaseConnection,
     user_id: i64,
@@ -81,6 +82,7 @@ pub async fn list_by_user(
     Ok(rows.into_iter().filter_map(row_to_problem).collect())
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn update(
     db: &DatabaseConnection,
     user_id: i64,

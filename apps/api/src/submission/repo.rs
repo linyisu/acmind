@@ -2,6 +2,7 @@ use crate::{error::AppResult, submission::model::SubmissionRow};
 use chrono::Utc;
 use sea_orm::{ConnectionTrait, DatabaseConnection, DbBackend, Statement};
 
+#[allow(clippy::too_many_arguments)]
 pub async fn insert(
     db: &DatabaseConnection,
     user_id: i64,
