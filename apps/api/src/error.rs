@@ -77,4 +77,40 @@ mod tests {
         let resp = AppError::Unauthorized.into_response();
         assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
     }
+
+    #[test]
+    fn forbidden_maps_to_403() {
+        let resp = AppError::Forbidden.into_response();
+        assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+    }
+
+    #[test]
+    fn bad_request_maps_to_400() {
+        let resp = AppError::BadRequest("bad input".into()).into_response();
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[test]
+    fn conflict_maps_to_409() {
+        let resp = AppError::Conflict("duplicate".into()).into_response();
+        assert_eq!(resp.status(), StatusCode::CONFLICT);
+    }
+
+    #[test]
+    fn internal_maps_to_500() {
+        let resp = AppError::Internal("oops".into()).into_response();
+        assert_eq!(resp.status(), StatusCode::INTERNAL_SERVER_ERROR);
+    }
+
+    #[test]
+    fn database_maps_to_500() {
+        let resp = AppError::Database("connection failed".into()).into_response();
+        assert_eq!(resp.status(), StatusCode::INTERNAL_SERVER_ERROR);
+    }
+
+    #[test]
+    fn validation_maps_to_422() {
+        let resp = AppError::Validation("invalid field".into()).into_response();
+        assert_eq!(resp.status(), StatusCode::UNPROCESSABLE_ENTITY);
+    }
 }
