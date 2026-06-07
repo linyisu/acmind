@@ -1,0 +1,351 @@
+use crate::{
+    error::AppResult,
+    import::model::*,
+    state::AppState,
+    tag::repo as tag_repo,
+};
+use chrono::Utc;
+use sea_orm::{ConnectionTrait, DatabaseConnection, DbBackend, Statement};
+
+pub struct ImportService<'a> {
+    pub state: &'a AppState,
+}
+
+impl<'a> ImportService<'a> {
+    pub fn new(state: &'a AppState) -> Self {
+        Self { state }
+    }
+
+    /// Import a single problem from VJudge. Returns (problem_id, is_new).
+    pub async fn import_problem(
+        &self,
+        user_id: i64,
+        req: &ImportProblemReq,
+    ) -> AppResult<(i64, bool)> {
+        let db = &self.state.db;
+        let source = format!("VJudge:{}", req.oj);
+
+        // Find existing problem by (user_id, source, external_id)
+        if let Some(existing) = find_problem_by_external(db, user_id, &source, &req.source_problem_id).await? {
+            return Ok((existing, false));
+        }
+
+        // Build URL if not provided
+        let url = req.url.clone().or_else(|| {
+            match req.oj.as_str() {
+                "Codeforces" => Some(format!("https://codeforces.com/problemset/problem/{}", &req.prob_num)),
+                "AtCoder" => Some(format!("https://atcoder.jp/contests/{}/tasks/{}", req.prob_num.split('_').next().unwrap_or(&req.prob_num), req.prob_num)),
+                _ => None,
+            }
+        });
+
+        // Insert problem
+        let problem_id = insert_problem(
+            db,
+            user_id,
+            &source,
+            &req.source_problem_id,
+            &req.title,
+            url.as_deref(),
+            req.statement.as_deref(),
+        )
+        .await?;
+
+        // Link tags
+        if let Some(tag_names) = &req.tags {
+            for name in tag_names {
+                let tag = tag_repo::insert(db, user_id, name).await?;
+                link_problem_tag(db, problem_id, tag.id).await?;
+            }
+        }
+
+        Ok((problem_id, true))
+    }
+
+    /// Import a single submission from VJudge.
+    pub async fn import_single_submission(
+        &self,
+        user_id: i64,
+        req: &ImportSingleSubmissionReq,
+    ) -> AppResult<ImportSubmissionResp> {
+        let db = &self.state.db;
+        let source = format!("VJudge:{}", req.oj);
+
+        // Find or create problem
+        let problem_id = match find_problem_by_external(db, user_id, &source, &req.prob_num).await? {
+            Some(id) => id,
+            None => {
+                insert_problem(db, user_id, &source, &req.prob_num, &req.prob_num, None, None).await?
+            }
+        };
+
+        // Map VJudge verdict to ACMind verdict
+        let verdict = map_verdict(&req.status);
+
+        // Parse runtime and memory
+        let runtime_ms = req.runtime.as_deref().and_then(parse_runtime_ms);
+        let memory_kb = req.memory.as_deref().and_then(parse_memory_kb);
+
+        // Check for duplicate submission (same problem + language + verdict + code hash within 1 minute)
+        let code_ref = req.code.as_str();
+        if is_duplicate_submission(db, user_id, problem_id, &verdict, code_ref).await? {
+            return Ok(ImportSubmissionResp { problem_id, submission_id: 0 });
+        }
+
+        // Insert submission
+        let submission_id = insert_submission(
+            db,
+            user_id,
+            problem_id,
+            &req.language,
+            &req.code,
+            &verdict,
+            runtime_ms,
+            memory_kb,
+        )
+        .await?;
+
+        Ok(ImportSubmissionResp {
+            problem_id,
+            submission_id,
+        })
+    }
+
+    /// Bulk import submissions from VJudge status page.
+    pub async fn import_submissions_bulk(
+        &self,
+        user_id: i64,
+        req: &ImportSubmissionsReq,
+    ) -> AppResult<ImportResp> {
+        let mut created = 0;
+        let mut skipped = 0;
+        let mut errors = Vec::new();
+
+        for item in &req.items {
+            let source = format!("VJudge:{}", item.oj);
+
+            // Find or create problem
+            let problem_id = match find_problem_by_external(&self.state.db, user_id, &source, &item.prob_num).await {
+                Ok(Some(id)) => id,
+                Ok(None) => {
+                    match insert_problem(&self.state.db, user_id, &source, &item.prob_num, &item.prob_num, None, None).await {
+                        Ok(id) => id,
+                        Err(e) => {
+                            errors.push(format!("{}: {}", item.prob_num, e));
+                            continue;
+                        }
+                    }
+                }
+                Err(e) => {
+                    errors.push(format!("{}: {}", item.prob_num, e));
+                    continue;
+                }
+            };
+
+            // Skip if no code provided (bulk import from status page usually doesn't have code)
+            let code = match &item.code {
+                Some(c) if !c.is_empty() => c.as_str(),
+                _ => {
+                    skipped += 1;
+                    continue;
+                }
+            };
+
+            let verdict = map_verdict(&item.status);
+            let runtime_ms = item.runtime.as_deref().and_then(parse_runtime_ms);
+            let memory_kb = item.memory.as_deref().and_then(parse_memory_kb);
+
+            match insert_submission(
+                &self.state.db,
+                user_id,
+                problem_id,
+                &item.language,
+                code,
+                &verdict,
+                runtime_ms,
+                memory_kb,
+            )
+            .await
+            {
+                Ok(_) => created += 1,
+                Err(e) => errors.push(format!("{}: {}", item.prob_num, e)),
+            }
+        }
+
+        Ok(ImportResp {
+            created,
+            skipped,
+            errors,
+        })
+    }
+}
+
+// ---- DB helpers ----
+
+async fn find_problem_by_external(
+    db: &DatabaseConnection,
+    user_id: i64,
+    source: &str,
+    external_id: &str,
+) -> AppResult<Option<i64>> {
+    let stmt = Statement::from_string(
+        DbBackend::Postgres,
+        format!(
+            "SELECT id FROM problem WHERE user_id = {} AND source = '{}' AND external_id = '{}'",
+            user_id,
+            source.replace('\'', "''"),
+            external_id.replace('\'', "''"),
+        ),
+    );
+    Ok(db.query_one(stmt).await?.and_then(|r| r.try_get_by::<i64, _>("id").ok()))
+}
+
+async fn insert_problem(
+    db: &DatabaseConnection,
+    user_id: i64,
+    source: &str,
+    external_id: &str,
+    title: &str,
+    url: Option<&str>,
+    statement: Option<&str>,
+) -> AppResult<i64> {
+    let now = Utc::now();
+    let stmt = Statement::from_string(
+        DbBackend::Postgres,
+        format!(
+            r#"INSERT INTO problem (user_id, source, external_id, title, url, statement, created_at, updated_at)
+               VALUES ({}, '{}', '{}', '{}', {}, {}, '{}', '{}')
+               RETURNING id"#,
+            user_id,
+            source.replace('\'', "''"),
+            external_id.replace('\'', "''"),
+            title.replace('\'', "''"),
+            opt_str(url),
+            opt_str(statement),
+            now.to_rfc3339(),
+            now.to_rfc3339(),
+        ),
+    );
+    let row = db
+        .query_one(stmt)
+        .await?
+        .ok_or_else(|| crate::error::AppError::Internal("problem insert returned no row".into()))?;
+    row.try_get_by::<i64, _>("id")
+        .map_err(|e| crate::error::AppError::Internal(format!("problem id parse: {e}")))
+}
+
+async fn link_problem_tag(db: &DatabaseConnection, problem_id: i64, tag_id: i64) -> AppResult<()> {
+    let stmt = Statement::from_string(
+        DbBackend::Postgres,
+        format!(
+            "INSERT INTO problem_tag (problem_id, tag_id) VALUES ({}, {}) ON CONFLICT DO NOTHING",
+            problem_id, tag_id,
+        ),
+    );
+    db.execute(stmt).await?;
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn insert_submission(
+    db: &DatabaseConnection,
+    user_id: i64,
+    problem_id: i64,
+    language: &str,
+    code: &str,
+    verdict: &str,
+    runtime_ms: Option<i32>,
+    memory_kb: Option<i32>,
+) -> AppResult<i64> {
+    let now = Utc::now();
+    let stmt = Statement::from_string(
+        DbBackend::Postgres,
+        format!(
+            r#"INSERT INTO submission (user_id, problem_id, language, code, verdict, runtime_ms, memory_kb, submitted_at)
+               VALUES ({}, {}, '{}', '{}', '{}', {}, {}, '{}')
+               RETURNING id"#,
+            user_id,
+            problem_id,
+            language.replace('\'', "''"),
+            code.replace('\'', "''"),
+            verdict.replace('\'', "''"),
+            opt_i32(runtime_ms),
+            opt_i32(memory_kb),
+            now.to_rfc3339(),
+        ),
+    );
+    let row = db
+        .query_one(stmt)
+        .await?
+        .ok_or_else(|| crate::error::AppError::Internal("submission insert returned no row".into()))?;
+    row.try_get_by::<i64, _>("id")
+        .map_err(|e| crate::error::AppError::Internal(format!("submission id parse: {e}")))
+}
+
+async fn is_duplicate_submission(
+    db: &DatabaseConnection,
+    user_id: i64,
+    problem_id: i64,
+    verdict: &str,
+    code: &str,
+) -> AppResult<bool> {
+    // Simple dedup: same user + problem + verdict + code within the last minute
+    let code_hash = format!("{:x}", md5::compute(code));
+    let stmt = Statement::from_string(
+        DbBackend::Postgres,
+        format!(
+            "SELECT 1 AS x FROM submission \
+             WHERE user_id = {} AND problem_id = {} AND verdict = '{}' \
+             AND md5(code) = '{}' \
+             AND submitted_at > NOW() - INTERVAL '1 minute' \
+             LIMIT 1",
+            user_id, problem_id, verdict.replace('\'', "''"), code_hash,
+        ),
+    );
+    Ok(db.query_one(stmt).await?.is_some())
+}
+
+// ---- Parsing helpers ----
+
+fn map_verdict(vjudge_status: &str) -> String {
+    let s = vjudge_status.to_uppercase();
+    if s.contains("ACCEPTED") || s == "AC" {
+        "AC".to_string()
+    } else if s.contains("WRONG") || s == "WA" {
+        "WA".to_string()
+    } else if s.contains("TIME LIMIT") || s == "TLE" {
+        "TLE".to_string()
+    } else if s.contains("RUNTIME") || s.contains("MEMORY LIMIT") || s == "RE" || s == "MLE" {
+        "RE".to_string()
+    } else if s.contains("COMPILATION") || s == "CE" {
+        "CE".to_string()
+    } else {
+        "PENDING".to_string()
+    }
+}
+
+fn parse_runtime_ms(s: &str) -> Option<i32> {
+    // VJudge formats: "15ms", "0ms", "1234 ms"
+    let num: String = s.chars().filter(|c| c.is_ascii_digit()).collect();
+    num.parse::<i32>().ok()
+}
+
+fn parse_memory_kb(s: &str) -> Option<i32> {
+    // VJudge formats: "1024KB", "0KB", "1234 KB"
+    let num: String = s.chars().filter(|c| c.is_ascii_digit()).collect();
+    num.parse::<i32>().ok()
+}
+
+fn opt_str(s: Option<&str>) -> String {
+    match s {
+        Some(v) => format!("'{}'", v.replace('\'', "''")),
+        None => "NULL".to_string(),
+    }
+}
+
+fn opt_i32(v: Option<i32>) -> String {
+    match v {
+        Some(n) => n.to_string(),
+        None => "NULL".to_string(),
+    }
+}

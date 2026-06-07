@@ -5,6 +5,7 @@ pub mod db;
 pub mod entity;
 pub mod error;
 pub mod health;
+pub mod import;
 pub mod knowledge;
 pub mod problem;
 pub mod state;
@@ -53,7 +54,8 @@ pub fn build_router(state: state::AppState) -> Router {
         .merge(submission::route::protected_router().route_layer(auth_layer.clone()))
         .merge(knowledge::route::protected_router().route_layer(auth_layer.clone()))
         .merge(tag::route::protected_router().route_layer(auth_layer.clone()))
-        .merge(analysis::route::protected_router().route_layer(auth_layer));
+        .merge(analysis::route::protected_router().route_layer(auth_layer.clone()))
+        .merge(import::route::protected_router().route_layer(auth_layer));
 
     Router::new()
         .merge(health::router())
