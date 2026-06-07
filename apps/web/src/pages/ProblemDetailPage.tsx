@@ -1,5 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import Markdown from "react-markdown";
 import { problemsApi, submissionsApi, tagsApi } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -101,7 +102,9 @@ export default function ProblemDetailPage() {
             <CardTitle className="text-base">Statement</CardTitle>
           </CardHeader>
           <CardContent>
-            <pre className="whitespace-pre-wrap text-sm leading-relaxed">{p.statement}</pre>
+            <div className="statement-content">
+              <Markdown>{p.statement}</Markdown>
+            </div>
           </CardContent>
         </Card>
       )}
