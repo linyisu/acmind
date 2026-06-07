@@ -25,6 +25,11 @@
       "js": ["content.js"],
       "css": ["content.css"],
       "run_at": "document_end"
+    },
+    {
+      "matches": ["http://localhost:*/*", "https://localhost:*/*", "http://127.0.0.1:*/*"],
+      "js": ["token-reader.js"],
+      "run_at": "document_end"
     }
   ],
   "background": {

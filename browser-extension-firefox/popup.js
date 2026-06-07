@@ -149,6 +149,27 @@ async function logout() {
   setStatus("disconnected", "Logged out");
 }
 
+// ---- Resolve username from token ----
+async function resolveUsername() {
+  const { apiUrl, token } = await getState();
+  if (!apiUrl || !token) return false;
+
+  try {
+    const resp = await fetch(`${apiUrl}/api/v1/auth/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (resp.ok) {
+      const user = await resp.json();
+      await saveState({ username: user.username });
+      showLoggedIn(user.username);
+      setStatus("connected", `Logged in as ${user.username}`);
+      return true;
+    }
+  } catch {}
+  return false;
+}
+
 // ---- Init ----
 (async () => {
   const { apiUrl, token, username } = await getState();
@@ -163,6 +184,14 @@ async function logout() {
   if (token && username) {
     showLoggedIn(username);
     await checkConnection();
+  } else if (token && !username) {
+    // Token auto-detected from ACMind page, resolve username
+    setStatus("checking", "Verifying...");
+    const resolved = await resolveUsername();
+    if (!resolved) {
+      showLoginForm();
+      setStatus("disconnected", "Token expired, please login");
+    }
   } else {
     showLoginForm();
     if (apiUrl) {
