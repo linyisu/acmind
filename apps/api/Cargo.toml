@@ -48,7 +48,3 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 # 工具
 chrono = { version = "0.4", features = ["serde"] }
 async-trait = "0.1"
-
-# 分析
-datafusion = "41"
-arrow = { version = "53", features = ["csv", "json"] }

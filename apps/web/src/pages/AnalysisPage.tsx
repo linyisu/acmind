@@ -71,7 +71,7 @@ export default function AnalysisPage() {
         <Card>
           <CardHeader>
             <CardTitle>Verdict distribution</CardTitle>
-            <CardDescription>Counts grouped by verdict (DataFusion aggregation)</CardDescription>
+            <CardDescription>Counts grouped by verdict</CardDescription>
           </CardHeader>
           <CardContent>
             {verdictData.length === 0 ? (
@@ -94,7 +94,7 @@ export default function AnalysisPage() {
         <Card>
           <CardHeader>
             <CardTitle>Submission timeline</CardTitle>
-            <CardDescription>Per-day counts (DataFusion SQL)</CardDescription>
+            <CardDescription>Per-day submission counts</CardDescription>
           </CardHeader>
           <CardContent>
             {timeline.isLoading ? (

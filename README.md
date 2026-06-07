@@ -9,7 +9,7 @@ leaving the app.
 
 ## Tech Stack
 
-**Backend:** Rust · Axum 0.7 · SeaORM 1 · PostgreSQL 16 · Tokio · DataFusion 41 · Apache Arrow 53
+**Backend:** Rust · Axum 0.7 · SeaORM 1 · PostgreSQL 16 · Tokio
 **Frontend:** React 19 · Vite 6 · TypeScript 5 · Tailwind 4 · shadcn/ui · TanStack Query 5 · Zustand 5
 **Infrastructure:** pnpm workspace · turbo · Docker Compose · GitHub Actions
 
@@ -39,8 +39,7 @@ pnpm install
 pnpm dev  # http://localhost:5173
 ```
 
-The first API start creates all tables via inline `CREATE TABLE IF NOT EXISTS`
-migrations and seeds a demo user on dev builds.
+The first API start runs SeaORM migrations automatically.
 
 ## Project Structure
 
@@ -85,17 +84,15 @@ require `Authorization: Bearer <jwt>`.
 | POST   | `/api/v1/tags` | Create tag |
 | DELETE | `/api/v1/tags/:id` | Delete tag |
 | GET    | `/api/v1/analysis/submissions/summary` | Total / AC rate / verdict histogram |
-| GET    | `/api/v1/analysis/submissions/timeline` | Per-day submission counts (DataFusion SQL) |
+| GET    | `/api/v1/analysis/submissions/timeline` | Per-day submission counts |
 | GET    | `/api/v1/analysis/problems/difficulty-distribution` | Difficulty histogram with JOIN |
 
 ## Analysis
 
-The `analysis` module streams user submissions into an in-memory
-[DataFusion](https://arrow.apache.org/datafusion/) session and runs SQL
-aggregations:
+The `analysis` module runs SQL aggregations directly on PostgreSQL via SeaORM:
 
 - `summary` — total submissions, AC rate, verdict counts
-- `timeline` — daily counts and AC counts (SQL `GROUP BY date_trunc('day', ...)`)
+- `timeline` — daily submission and AC counts (filterable by date range)
 - `difficulty_distribution` — joins `submission` and `problem` to bucket
   attempts by problem difficulty
 
