@@ -174,31 +174,23 @@ async function resolveUsername() {
 (async () => {
   const { apiUrl, token, username } = await getState();
 
-  // Pre-fill API URL
-  if (apiUrl) {
-    $("#api-url").value = apiUrl;
-  } else {
-    $("#api-url").value = "http://localhost:8080";
-  }
+  // Pre-fill API URL in login form
+  $("#api-url").value = apiUrl || "http://localhost:8080";
 
-  if (token && username) {
-    showLoggedIn(username);
-    await checkConnection();
-  } else if (token && !username) {
-    // Token auto-detected from ACMind page, resolve username
+  if (token) {
+    // Has token (auto-detected or manual) — show logged-in immediately
+    showLoggedIn(username || "...");
     setStatus("checking", "Verifying...");
     const resolved = await resolveUsername();
     if (!resolved) {
+      // Token invalid or expired — fall back to login form
       showLoginForm();
-      setStatus("disconnected", "Token expired, please login");
+      setStatus("disconnected", "Session expired, please login");
     }
   } else {
+    // No token — show login form
     showLoginForm();
-    if (apiUrl) {
-      await checkConnection();
-    } else {
-      setStatus("disconnected", "Configure API URL and login");
-    }
+    setStatus("disconnected", "Open ACMind app or login below");
   }
 })();
 
