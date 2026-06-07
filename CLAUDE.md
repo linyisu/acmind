@@ -41,3 +41,31 @@ This project is indexed by GitNexus as **acmind** (1203 symbols, 2565 relationsh
 | Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
 
 <!-- gitnexus:end -->
+
+## SeaORM Schema 变更工作流
+
+acmind 用 SeaORM 管理 Postgres schema。**所有 schema 变更必须走 migration 文件，绝不直接改老 migration**。
+
+### 改 schema 的标准流程
+
+1. **改 migration 文件**（`apps/api/migration/src/m20260101_NNNNNN_xxx.rs`）
+   - 新增列 / 改类型 / 加索引 → **手写 `up()` 里的 DDL**
+   - 同步写 `down()`（哪怕只是 drop table，保留回滚能力）
+2. **本地重建 DB 验证**：
+   ```bash
+   docker compose down -v        # 删 volume 重建
+   docker compose up -d --build  # 启动时自动跑 Migrator::up
+   ```
+3. **同步 entity 代码**：
+   ```bash
+   pnpm exec sea-orm-cli generate entity -u postgres://acmind:acmind@localhost:5432/acmind -o apps/api/src/entity
+   ```
+   - 这一步**会重写 entity 目录里的所有 model 文件**（自动生成，不要手改）
+   - 如果新增了外键关系，**手工检查 `Relation` enum 和 `impl Related<...>` 是否需要补**
+
+### 铁律
+
+- **已存在的 migration 文件**（已跑过 DB 的）**不要改 up/down 函数**——只能新建一个 migration 去"修正"（生产场景）
+- 当前项目还在开发阶段，**已经写过的 migration 文件可以直接改**，配合 `docker compose down -v` 重建 DB
+- `entity/` 目录是自动生成代码，**不要手改**
+- 新加表前先想清楚：哪些列 NOT NULL / UNIQUE / 需要 INDEX / 用 `timestamptz` 还是 `timestamp` / 软删还是硬删
