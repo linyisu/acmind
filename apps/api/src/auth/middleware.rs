@@ -26,6 +26,8 @@ mod tests {
             jwt_secret: Arc::new("test-middleware-secret".into()),
             jwt_expires_in: 3600,
             allow_register: true,
+            rate_limit_per_second: 100,
+            rate_limit_burst: 200,
         }
     }
 

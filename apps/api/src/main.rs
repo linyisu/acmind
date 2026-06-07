@@ -18,12 +18,15 @@ async fn main() -> anyhow::Result<()> {
         jwt_secret: Arc::new(cfg.jwt_secret),
         jwt_expires_in: cfg.jwt_expires_in,
         allow_register: cfg.allow_register,
+        rate_limit_per_second: cfg.rate_limit_per_second,
+        rate_limit_burst: cfg.rate_limit_burst,
     };
 
     let app = build_router(state);
     let addr = format!("0.0.0.0:{}", cfg.api_port);
     let listener = tokio::net::TcpListener::bind(&addr).await?;
     tracing::info!(%addr, "acmind-api listening");
-    axum::serve(listener, app).await?;
+    axum::serve(listener, app.into_make_service_with_connect_info::<std::net::SocketAddr>())
+        .await?;
     Ok(())
 }

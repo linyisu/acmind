@@ -23,6 +23,8 @@ pub async fn test_state() -> AppState {
         jwt_secret: Arc::new("test-secret-for-integration".into()),
         jwt_expires_in: 3600,
         allow_register: true,
+        rate_limit_per_second: 100,
+        rate_limit_burst: 200,
     }
 }
 

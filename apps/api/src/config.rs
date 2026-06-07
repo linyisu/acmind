@@ -7,6 +7,8 @@ pub struct Config {
     pub jwt_secret: String,
     pub jwt_expires_in: i64,
     pub allow_register: bool,
+    pub rate_limit_per_second: u64,
+    pub rate_limit_burst: u32,
 }
 
 impl Config {
@@ -29,12 +31,22 @@ impl Config {
             .ok()
             .map(|s| !matches!(s.as_str(), "false" | "0" | "no"))
             .unwrap_or(true);
+        let rate_limit_per_second = std::env::var("RATE_LIMIT_PER_SECOND")
+            .ok()
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(10u64);
+        let rate_limit_burst = std::env::var("RATE_LIMIT_BURST")
+            .ok()
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(20u32);
         Ok(Config {
             database_url,
             api_port,
             jwt_secret,
             jwt_expires_in,
             allow_register,
+            rate_limit_per_second,
+            rate_limit_burst,
         })
     }
 }
