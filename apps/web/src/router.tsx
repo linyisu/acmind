@@ -4,6 +4,7 @@ import RegisterPage from "./pages/RegisterPage";
 import DashboardPage from "./pages/DashboardPage";
 import ProblemsListPage from "./pages/ProblemsListPage";
 import ProblemFormPage from "./pages/ProblemFormPage";
+import ProblemDetailPage from "./pages/ProblemDetailPage";
 import SubmissionsListPage from "./pages/SubmissionsListPage";
 import KnowledgeListPage from "./pages/KnowledgeListPage";
 import AnalysisPage from "./pages/AnalysisPage";
@@ -40,7 +41,8 @@ export default function AppRouter() {
         <Route path="/" element={<DashboardPage />} />
         <Route path="/problems" element={<ProblemsListPage />} />
         <Route path="/problems/new" element={<ProblemFormPage />} />
-        <Route path="/problems/:id" element={<ProblemFormPage />} />
+        <Route path="/problems/:id" element={<ProblemDetailPage />} />
+        <Route path="/problems/:id/edit" element={<ProblemFormPage />} />
         <Route path="/submissions" element={<SubmissionsListPage />} />
         <Route path="/knowledge" element={<KnowledgeListPage />} />
         <Route path="/analysis" element={<AnalysisPage />} />
