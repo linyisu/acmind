@@ -1,6 +1,8 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import Markdown from "react-markdown";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
 import { problemsApi, submissionsApi, tagsApi } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -103,7 +105,9 @@ export default function ProblemDetailPage() {
           </CardHeader>
           <CardContent>
             <div className="statement-content">
-              <Markdown>{p.statement}</Markdown>
+              <Markdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
+                {p.statement}
+              </Markdown>
             </div>
           </CardContent>
         </Card>
