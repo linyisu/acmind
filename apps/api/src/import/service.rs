@@ -118,7 +118,7 @@ impl<'a> ImportService<'a> {
         req: &ImportSubmissionsReq,
     ) -> AppResult<ImportResp> {
         let mut created = 0;
-        let mut skipped = 0;
+        let skipped = 0;
         let mut errors = Vec::new();
 
         for item in &req.items {
@@ -142,14 +142,7 @@ impl<'a> ImportService<'a> {
                 }
             };
 
-            // Skip if no code provided (bulk import from status page usually doesn't have code)
-            let code = match &item.code {
-                Some(c) if !c.is_empty() => c.as_str(),
-                _ => {
-                    skipped += 1;
-                    continue;
-                }
-            };
+            let code = item.code.as_deref().unwrap_or("");
 
             let verdict = map_verdict(&item.status);
             let runtime_ms = item.runtime.as_deref().and_then(parse_runtime_ms);
@@ -289,7 +282,21 @@ async fn is_duplicate_submission(
     verdict: &str,
     code: &str,
 ) -> AppResult<bool> {
-    // Simple dedup: same user + problem + verdict + code within the last minute
+    if code.is_empty() {
+        // No code to dedup against — check by problem + verdict + recent time window
+        let stmt = Statement::from_string(
+            DbBackend::Postgres,
+            format!(
+                "SELECT 1 AS x FROM submission \
+                 WHERE user_id = {} AND problem_id = {} AND verdict = '{}' \
+                 AND submitted_at > NOW() - INTERVAL '1 minute' \
+                 LIMIT 1",
+                user_id, problem_id, verdict.replace('\'', "''"),
+            ),
+        );
+        return Ok(db.query_one(stmt).await?.is_some());
+    }
+    // Dedup by code hash when code is available
     let code_hash = format!("{:x}", md5::compute(code));
     let stmt = Statement::from_string(
         DbBackend::Postgres,
