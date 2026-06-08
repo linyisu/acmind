@@ -469,11 +469,8 @@
 		try {
 			let payload;
 			switch (mode) {
-				case "status-page":
-					payload = await scrapeStatusPage();
-					break;
-				case "status-all":
-					payload = await scrapeStatusAll();
+				case "problem-full":
+					payload = await scrapeProblemFull();
 					break;
 				case "problem-page":
 					payload = await scrapeProblemPage();
@@ -494,6 +491,40 @@
 			});
 		}
 	});
+
+	// ---- Scrape: problem page + all user submissions for this problem ----
+	async function scrapeProblemFull() {
+		// 1. Scrape problem info (title, statement, tags)
+		progress("Fetching problem info...");
+		const problem = await scrapeProblemPage();
+
+		// 2. Scrape all user submissions for this problem
+		const username = extractUsernameFromPage();
+		progress(`Fetching submissions for ${problem.oj}-${problem.probNum}...`);
+		const submissions = await scrapeProblemSubmissions(
+			problem.oj,
+			problem.probNum,
+			username,
+		);
+
+		// 3. For each submission, try to fetch source code
+		progress(`Fetching source code for ${submissions.length} submissions...`);
+		for (let i = 0; i < submissions.length; i++) {
+			progress(`Fetching code ${i + 1}/${submissions.length}...`);
+			try {
+				const code = await scrapeSourceCode(submissions[i].runId);
+				if (code) submissions[i].code = code;
+			} catch {
+				// Skip if code not accessible
+			}
+		}
+
+		return {
+			type: "problem-full",
+			problem,
+			submissions,
+		};
+	}
 
 	// ---- Signal ready ----
 	postToContent({ type: "scraper-ready" });

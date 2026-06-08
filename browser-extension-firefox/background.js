@@ -115,51 +115,43 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 });
 
 async function handleImport(payload) {
-  let endpoint, data;
+  if (payload.type === "problem-full") {
+    // Step 1: Import problem
+    const problemResp = await postToAcmind("/api/v1/import/vjudge/problem", {
+      source_problem_id: payload.problem.sourceProblemId,
+      oj: payload.problem.oj,
+      prob_num: payload.problem.probNum,
+      title: payload.problem.title,
+      url: payload.problem.url,
+      statement: payload.problem.statement,
+      tags: payload.problem.tags,
+    });
 
-  switch (payload.type) {
-    case "status-page":
-    case "status-all":
-      endpoint = "/api/v1/import/vjudge/submissions";
-      data = {
-        username: payload.username,
-        items: payload.items,
-      };
-      break;
+    // Step 2: Import each submission
+    let imported = 0;
+    for (const sub of payload.submissions) {
+      try {
+        await postToAcmind("/api/v1/import/vjudge/submission", {
+          run_id: sub.runId,
+          oj: sub.oj,
+          prob_num: sub.probNum,
+          status: sub.status,
+          language: sub.language,
+          code: sub.code || "",
+          runtime: sub.runtime,
+          memory: sub.memory,
+          submit_time: sub.time ? String(sub.time) : null,
+        });
+        imported++;
+      } catch (e) {
+        console.error(`[ACMind] Failed to import submission ${sub.runId}:`, e.message);
+      }
+    }
 
-    case "problem-page":
-      endpoint = "/api/v1/import/vjudge/problem";
-      data = {
-        source_problem_id: payload.sourceProblemId,
-        oj: payload.oj,
-        prob_num: payload.probNum,
-        title: payload.title,
-        url: payload.url,
-        statement: payload.statement,
-        tags: payload.tags,
-      };
-      break;
-
-    case "solution-page":
-      endpoint = "/api/v1/import/vjudge/submission";
-      data = {
-        run_id: payload.runId,
-        oj: payload.oj,
-        prob_num: payload.probNum,
-        status: payload.status,
-        language: payload.language,
-        code: payload.code,
-        runtime: payload.runtime,
-        memory: payload.memory,
-        submit_time: payload.submitTime,
-      };
-      break;
-
-    default:
-      throw new Error(`Unknown payload type: ${payload.type}`);
+    return { success: true, problem: problemResp, submissions_imported: imported };
   }
 
-  return postToAcmind(endpoint, data);
+  throw new Error(`Unknown payload type: ${payload.type}`);
 }
 
 // ---- Notify content scripts about connection changes ----
