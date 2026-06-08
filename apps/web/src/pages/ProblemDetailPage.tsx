@@ -5,6 +5,7 @@ import Markdown from "react-markdown";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import { Light as SyntaxHighlighter } from "react-syntax-highlighter";
+import vscDarkPlus from "react-syntax-highlighter/dist/esm/styles/prism/vsc-dark-plus";
 import cpp from "react-syntax-highlighter/dist/esm/languages/hljs/cpp";
 import python from "react-syntax-highlighter/dist/esm/languages/hljs/python";
 import java from "react-syntax-highlighter/dist/esm/languages/hljs/java";
@@ -28,7 +29,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Copy, Check } from "lucide-react";
 
 SyntaxHighlighter.registerLanguage("cpp", cpp);
 SyntaxHighlighter.registerLanguage("c", cpp);
@@ -60,6 +61,7 @@ export default function ProblemDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const problem = useQuery({
     queryKey: ["problems", Number(id)],
@@ -87,6 +89,14 @@ export default function ProblemDetailPage() {
   const tagNames = p.tag_ids
     .map((tid) => tags.data?.find((t) => t.id === tid)?.name)
     .filter(Boolean) as string[];
+
+  function copyCode() {
+    if (selectedSubmission?.code) {
+      navigator.clipboard.writeText(selectedSubmission.code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  }
 
   function getLanguageHint(lang: string): string {
     for (const [key, value] of Object.entries(LANG_MAP)) {
@@ -196,38 +206,49 @@ export default function ProblemDetailPage() {
 
       {/* Submission code dialog */}
       <Dialog open={!!selectedSubmission} onOpenChange={(open) => { if (!open) setSelectedSubmission(null); }}>
-        <DialogContent className="max-w-5xl w-[90vw] max-h-[85vh] overflow-hidden flex flex-col">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <span>Submission #{selectedSubmission?.id}</span>
+        <DialogContent className="w-[95vw] max-w-[1400px] h-[90vh] p-0 gap-0 overflow-hidden flex flex-col">
+          {/* Header bar */}
+          <div className="flex items-center justify-between px-4 py-2.5 border-b bg-muted/30 shrink-0">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-sm">#{selectedSubmission?.id}</span>
               {selectedSubmission && (
                 <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${verdictColor(selectedSubmission.verdict)}`}>
                   {selectedSubmission.verdict}
                 </span>
               )}
               {selectedSubmission && (
-                <span className="text-sm font-normal text-muted-foreground">
+                <span className="text-xs text-muted-foreground">
                   {selectedSubmission.language} · {selectedSubmission.runtime_ms ?? "—"}ms · {selectedSubmission.memory_kb ?? "—"}KB
                 </span>
               )}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="overflow-auto flex-1 rounded-md">
+            </div>
+            <Button variant="ghost" size="sm" className="gap-1.5" onClick={copyCode}>
+              {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+              {copied ? "Copied" : "Copy"}
+            </Button>
+          </div>
+          {/* Code area */}
+          <div className="flex-1 overflow-auto">
             {selectedSubmission?.code ? (
               <SyntaxHighlighter
                 language={getLanguageHint(selectedSubmission.language)}
+                style={vscDarkPlus}
                 customStyle={{
                   margin: 0,
-                  borderRadius: "0.375rem",
-                  fontSize: "0.85rem",
-                  minHeight: "300px",
+                  borderRadius: 0,
+                  fontSize: "0.82rem",
+                  lineHeight: "1.6",
+                  minHeight: "100%",
+                  background: "#1e1e1e",
                 }}
                 showLineNumbers
               >
                 {selectedSubmission.code}
               </SyntaxHighlighter>
             ) : (
-              <p className="text-muted-foreground p-4">No source code available for this submission.</p>
+              <div className="flex items-center justify-center h-full text-muted-foreground">
+                No source code available for this submission.
+              </div>
             )}
           </div>
         </DialogContent>
