@@ -1,29 +1,7 @@
 # ACMind — Agent Instructions
 
 ## Overview
-ACMind is a personal ACM/ICPC training desktop app built with:
-- **Frontend**: React 19 + Vite + TypeScript + TailwindCSS v4 + shadcn/ui
-- **Backend**: Tauri v2 (Rust) with SQLite (sqlx), file-system storage
-- **Package manager**: pnpm
-
-## Project Structure
-```
-src/                          # React frontend
-  components/ui/              # shadcn/ui components (button, card, badge, etc.)
-  components/layout/          # Layout components (AppSidebar)
-  pages/                      # Route pages (Dashboard, Problems, ProblemDetail, etc.)
-  lib/                        # Types, utils, API layer
-  hooks/                      # Custom React hooks
-  test/                       # Test setup
-src-tauri/
-  src/
-    db/                       # models.rs, repo.rs, mod.rs (SQLite schema + CRUD)
-    commands/                 # Tauri command handlers
-    storage/                  # File-system operations
-    ai/                       # AI analysis module (placeholder)
-    error.rs                  # AppError type
-  migrations/                 # SQL migration files
-```
+See `CLAUDE.md` for project architecture, tech stack, and SeaORM schema workflow.
 
 ## Rules (MUST FOLLOW)
 
