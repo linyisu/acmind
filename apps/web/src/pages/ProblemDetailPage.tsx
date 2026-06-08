@@ -198,7 +198,7 @@ export default function ProblemDetailPage() {
       <Dialog open={!!selectedSubmission} onOpenChange={(open) => { if (!open) setSelectedSubmission(null); }}>
         <DialogContent className="sm:max-w-none w-[95vw] max-w-[1400px] h-[90vh] p-0 gap-0 overflow-hidden flex flex-col">
           {/* Header bar */}
-          <div className="flex items-center justify-between px-4 py-2.5 border-b bg-muted/30 shrink-0">
+          <div className="flex items-center justify-between pl-4 pr-12 py-2.5 border-b bg-muted/30 shrink-0">
             <div className="flex items-center gap-2">
               <span className="font-semibold text-sm">#{selectedSubmission?.id}</span>
               {selectedSubmission && (
