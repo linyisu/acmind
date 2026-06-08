@@ -198,23 +198,27 @@ export default function ProblemDetailPage() {
       <Dialog open={!!selectedSubmission} onOpenChange={(open) => { if (!open) setSelectedSubmission(null); }}>
         <DialogContent className="sm:max-w-none w-[95vw] max-w-[1400px] h-[90vh] p-0 gap-0 overflow-hidden flex flex-col">
           {/* Header bar */}
-          <div className="flex items-center justify-between pl-4 pr-12 py-2.5 border-b bg-muted/30 shrink-0">
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-sm">#{selectedSubmission?.id}</span>
-              {selectedSubmission && (
-                <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${verdictColor(selectedSubmission.verdict)}`}>
-                  {selectedSubmission.verdict}
-                </span>
-              )}
-              {selectedSubmission && (
-                <span className="text-xs text-muted-foreground">
-                  {selectedSubmission.language} · {selectedSubmission.runtime_ms ?? "—"}ms · {selectedSubmission.memory_kb ?? "—"}KB
-                </span>
-              )}
+          <div className="flex items-center gap-2 px-4 py-2.5 border-b bg-muted/30 shrink-0 pr-20">
+            <span className="font-semibold text-sm">#{selectedSubmission?.id}</span>
+            {selectedSubmission && (
+              <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${verdictColor(selectedSubmission.verdict)}`}>
+                {selectedSubmission.verdict}
+              </span>
+            )}
+            {selectedSubmission && (
+              <span className="text-xs text-muted-foreground">
+                {selectedSubmission.language} · {selectedSubmission.runtime_ms ?? "—"}ms · {selectedSubmission.memory_kb ?? "—"}KB
+              </span>
+            )}
+            <div className="ml-auto">
+              <button
+                onClick={copyCode}
+                title={copied ? "Copied" : "Copy"}
+                className="rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:outline-hidden"
+              >
+                {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
+              </button>
             </div>
-            <Button variant="ghost" size="icon" onClick={copyCode} title={copied ? "Copied" : "Copy"}>
-              {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-            </Button>
           </div>
           {/* Code area */}
           <div className="flex-1 overflow-auto">
