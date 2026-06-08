@@ -1,3 +1,4 @@
+pub mod ai;
 pub mod analysis;
 pub mod auth;
 pub mod config;
@@ -55,7 +56,8 @@ pub fn build_router(state: state::AppState) -> Router {
         .merge(knowledge::route::protected_router().route_layer(auth_layer.clone()))
         .merge(tag::route::protected_router().route_layer(auth_layer.clone()))
         .merge(analysis::route::protected_router().route_layer(auth_layer.clone()))
-        .merge(import::route::protected_router().route_layer(auth_layer));
+        .merge(import::route::protected_router().route_layer(auth_layer.clone()))
+        .merge(ai::route::protected_router().route_layer(auth_layer));
 
     Router::new()
         .merge(health::router())

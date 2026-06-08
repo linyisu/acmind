@@ -6,6 +6,7 @@ mod m20260101_000003_create_submission;
 mod m20260101_000004_create_knowledge;
 mod m20260101_000005_create_tag;
 mod m20260101_000006_create_join_tables;
+mod m20260608_142216_create_ai_analysis;
 
 pub struct Migrator;
 
@@ -19,6 +20,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20260101_000004_create_knowledge::Migration),
             Box::new(m20260101_000005_create_tag::Migration),
             Box::new(m20260101_000006_create_join_tables::Migration),
+            Box::new(m20260608_142216_create_ai_analysis::Migration),
         ]
     }
 }

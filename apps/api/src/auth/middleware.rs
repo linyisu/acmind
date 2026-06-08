@@ -28,6 +28,7 @@ mod tests {
             allow_register: true,
             rate_limit_per_second: 100,
             rate_limit_burst: 200,
+            llm: Arc::new(crate::ai::provider::NoopLlmProvider),
         }
     }
 

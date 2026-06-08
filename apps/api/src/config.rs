@@ -9,6 +9,7 @@ pub struct Config {
     pub allow_register: bool,
     pub rate_limit_per_second: u64,
     pub rate_limit_burst: u32,
+    pub llm_provider: String,
 }
 
 impl Config {
@@ -39,6 +40,8 @@ impl Config {
             .ok()
             .and_then(|s| s.parse().ok())
             .unwrap_or(20u32);
+        let llm_provider = std::env::var("LLM_PROVIDER")
+            .unwrap_or_else(|_| "noop".to_string());
         Ok(Config {
             database_url,
             api_port,
@@ -47,6 +50,7 @@ impl Config {
             allow_register,
             rate_limit_per_second,
             rate_limit_burst,
+            llm_provider,
         })
     }
 }

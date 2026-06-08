@@ -1,4 +1,4 @@
-use acmind_api::{auth::jwt, state::AppState};
+use acmind_api::{ai::provider::NoopLlmProvider, auth::jwt, state::AppState};
 use acmind_migration::MigratorTrait;
 use sea_orm::Database;
 use std::sync::Arc;
@@ -25,6 +25,7 @@ pub async fn test_state() -> AppState {
         allow_register: true,
         rate_limit_per_second: 100,
         rate_limit_burst: 200,
+        llm: Arc::new(NoopLlmProvider),
     }
 }
 

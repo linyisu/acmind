@@ -1,4 +1,4 @@
-use acmind_api::{build_router, config::Config, db, state::AppState};
+use acmind_api::{ai::provider::NoopLlmProvider, build_router, config::Config, db, state::AppState};
 use std::sync::Arc;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
@@ -13,6 +13,14 @@ async fn main() -> anyhow::Result<()> {
     let db = db::connect(&cfg.database_url).await?;
     db::run_migrations(&db).await?;
 
+    let llm: Arc<dyn acmind_api::ai::provider::LlmProvider> = match cfg.llm_provider.as_str() {
+        "noop" | "" => Arc::new(NoopLlmProvider),
+        other => {
+            tracing::warn!("Unknown LLM provider '{}', falling back to noop", other);
+            Arc::new(NoopLlmProvider)
+        }
+    };
+
     let state = AppState {
         db,
         jwt_secret: Arc::new(cfg.jwt_secret),
@@ -20,6 +28,7 @@ async fn main() -> anyhow::Result<()> {
         allow_register: cfg.allow_register,
         rate_limit_per_second: cfg.rate_limit_per_second,
         rate_limit_burst: cfg.rate_limit_burst,
+        llm,
     };
 
     let app = build_router(state);

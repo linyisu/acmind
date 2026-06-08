@@ -1,3 +1,4 @@
+use crate::ai::provider::LlmProvider;
 use sea_orm::DatabaseConnection;
 use std::sync::Arc;
 
@@ -9,4 +10,5 @@ pub struct AppState {
     pub allow_register: bool,
     pub rate_limit_per_second: u64,
     pub rate_limit_burst: u32,
+    pub llm: Arc<dyn LlmProvider>,
 }
