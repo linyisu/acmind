@@ -139,8 +139,8 @@ async function handleImport(payload) {
         status: sub.status,
         language: sub.language,
         code: sub.code || "",
-        runtime: sub.runtime,
-        memory: sub.memory,
+        runtime: sub.runtime != null ? String(sub.runtime) : null,
+        memory: sub.memory != null ? String(sub.memory) : null,
         submit_time: sub.time ? String(sub.time) : null,
       };
       console.log("[ACMind] Importing submission:", sub.runId, sub.status, sub.language);
