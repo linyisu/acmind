@@ -16,164 +16,85 @@ impl<'a> ImportService<'a> {
         Self { state }
     }
 
-    /// Import a single problem from VJudge. Returns (problem_id, is_new).
-    pub async fn import_problem(
+    /// Import a problem and all its submissions in one request.
+    pub async fn import_problem_full(
         &self,
         user_id: i64,
-        req: &ImportProblemReq,
-    ) -> AppResult<(i64, bool)> {
-        let db = &self.state.db;
-        let source = format!("VJudge:{}", req.oj);
-
-        // Find existing problem by (user_id, source, external_id)
-        if let Some(existing) = find_problem_by_external(db, user_id, &source, &req.source_problem_id).await? {
-            return Ok((existing, false));
-        }
-
-        // Build URL if not provided
-        let url = req.url.clone().or_else(|| {
-            match req.oj.as_str() {
-                "Codeforces" => Some(format!("https://codeforces.com/problemset/problem/{}", &req.prob_num)),
-                "AtCoder" => Some(format!("https://atcoder.jp/contests/{}/tasks/{}", req.prob_num.split('_').next().unwrap_or(&req.prob_num), req.prob_num)),
-                _ => None,
-            }
-        });
-
-        // Insert problem
-        let problem_id = insert_problem(
-            db,
-            user_id,
-            &source,
-            &req.source_problem_id,
-            &req.title,
-            url.as_deref(),
-            req.statement.as_deref(),
-        )
-        .await?;
-
-        // Link tags
-        if let Some(tag_names) = &req.tags {
-            for name in tag_names {
-                let tag = tag_repo::insert(db, user_id, name).await?;
-                link_problem_tag(db, problem_id, tag.id).await?;
-            }
-        }
-
-        Ok((problem_id, true))
-    }
-
-    /// Import a single submission from VJudge.
-    pub async fn import_single_submission(
-        &self,
-        user_id: i64,
-        req: &ImportSingleSubmissionReq,
-    ) -> AppResult<ImportSubmissionResp> {
+        req: &ImportProblemFullReq,
+    ) -> AppResult<ImportProblemFullResp> {
         let db = &self.state.db;
         let source = format!("VJudge:{}", req.oj);
 
         // Find or create problem
-        let problem_id = match find_problem_by_external(db, user_id, &source, &req.prob_num).await? {
-            Some(id) => id,
-            None => {
-                insert_problem(db, user_id, &source, &req.prob_num, &req.prob_num, None, None).await?
+        let (problem_id, is_new) = find_or_create_problem(
+            db, user_id, &source, &req.source_problem_id,
+            &req.title, req.url.as_deref(), req.statement.as_deref(),
+        ).await?;
+
+        // Link tags
+        if is_new {
+            if let Some(tag_names) = &req.tags {
+                for name in tag_names {
+                    let tag = tag_repo::insert(db, user_id, name).await?;
+                    link_problem_tag(db, problem_id, tag.id).await?;
+                }
             }
-        };
-
-        // Map VJudge verdict to ACMind verdict
-        let verdict = map_verdict(&req.status);
-
-        // Parse runtime and memory
-        let runtime_ms = req.runtime.as_deref().and_then(parse_runtime_ms);
-        let memory_kb = req.memory.as_deref().and_then(parse_memory_kb);
-
-        // Check for duplicate submission (same problem + language + verdict + code hash within 1 minute)
-        let code_ref = req.code.as_str();
-        if is_duplicate_submission(db, user_id, problem_id, &verdict, code_ref).await? {
-            return Ok(ImportSubmissionResp { problem_id, submission_id: 0 });
         }
 
-        // Insert submission
-        let submission_id = insert_submission(
-            db,
-            user_id,
-            problem_id,
-            &req.language,
-            &req.code,
-            &verdict,
-            runtime_ms,
-            memory_kb,
-        )
-        .await?;
-
-        Ok(ImportSubmissionResp {
-            problem_id,
-            submission_id,
-        })
-    }
-
-    /// Bulk import submissions from VJudge status page.
-    pub async fn import_submissions_bulk(
-        &self,
-        user_id: i64,
-        req: &ImportSubmissionsReq,
-    ) -> AppResult<ImportResp> {
-        let mut created = 0;
-        let skipped = 0;
+        // Import submissions
+        let mut imported = 0;
+        let mut skipped = 0;
         let mut errors = Vec::new();
 
-        for item in &req.items {
-            let source = format!("VJudge:{}", item.oj);
+        for sub in &req.submissions {
+            let verdict = map_verdict(&sub.status);
+            let code = sub.code.as_deref().unwrap_or("");
+            let runtime_ms = sub.runtime.as_deref().and_then(parse_runtime_ms);
+            let memory_kb = sub.memory.as_deref().and_then(parse_memory_kb);
 
-            // Find or create problem
-            let problem_id = match find_problem_by_external(&self.state.db, user_id, &source, &item.prob_num).await {
-                Ok(Some(id)) => id,
-                Ok(None) => {
-                    match insert_problem(&self.state.db, user_id, &source, &item.prob_num, &item.prob_num, None, None).await {
-                        Ok(id) => id,
-                        Err(e) => {
-                            errors.push(format!("{}: {}", item.prob_num, e));
-                            continue;
-                        }
-                    }
-                }
-                Err(e) => {
-                    errors.push(format!("{}: {}", item.prob_num, e));
-                    continue;
-                }
-            };
-
-            let code = item.code.as_deref().unwrap_or("");
-
-            let verdict = map_verdict(&item.status);
-            let runtime_ms = item.runtime.as_deref().and_then(parse_runtime_ms);
-            let memory_kb = item.memory.as_deref().and_then(parse_memory_kb);
+            // Skip if duplicate
+            match is_duplicate_submission(db, user_id, problem_id, &verdict, code).await {
+                Ok(true) => { skipped += 1; continue; }
+                Ok(false) => {}
+                Err(e) => { errors.push(format!("dedup check: {e}")); continue; }
+            }
 
             match insert_submission(
-                &self.state.db,
-                user_id,
-                problem_id,
-                &item.language,
-                code,
-                &verdict,
-                runtime_ms,
-                memory_kb,
-            )
-            .await
-            {
-                Ok(_) => created += 1,
-                Err(e) => errors.push(format!("{}: {}", item.prob_num, e)),
+                db, user_id, problem_id,
+                &sub.language, code, &verdict,
+                runtime_ms, memory_kb,
+            ).await {
+                Ok(_) => imported += 1,
+                Err(e) => errors.push(format!("{}: {}", sub.prob_num, e)),
             }
         }
 
-        Ok(ImportResp {
-            created,
-            skipped,
+        Ok(ImportProblemFullResp {
+            problem_id,
+            submissions_imported: imported,
+            submissions_skipped: skipped,
             errors,
         })
     }
 }
 
 // ---- DB helpers ----
+
+async fn find_or_create_problem(
+    db: &DatabaseConnection,
+    user_id: i64,
+    source: &str,
+    external_id: &str,
+    title: &str,
+    url: Option<&str>,
+    statement: Option<&str>,
+) -> AppResult<(i64, bool)> {
+    if let Some(id) = find_problem_by_external(db, user_id, source, external_id).await? {
+        return Ok((id, false));
+    }
+    let id = insert_problem(db, user_id, source, external_id, title, url, statement).await?;
+    Ok((id, true))
+}
 
 async fn find_problem_by_external(
     db: &DatabaseConnection,
@@ -283,7 +204,6 @@ async fn is_duplicate_submission(
     code: &str,
 ) -> AppResult<bool> {
     if code.is_empty() {
-        // No code to dedup against — check by problem + verdict + recent time window
         let stmt = Statement::from_string(
             DbBackend::Postgres,
             format!(
@@ -296,7 +216,6 @@ async fn is_duplicate_submission(
         );
         return Ok(db.query_one(stmt).await?.is_some());
     }
-    // Dedup by code hash when code is available
     let code_hash = format!("{:x}", md5::compute(code));
     let stmt = Statement::from_string(
         DbBackend::Postgres,
@@ -332,15 +251,11 @@ fn map_verdict(vjudge_status: &str) -> String {
 }
 
 fn parse_runtime_ms(s: &str) -> Option<i32> {
-    // VJudge formats: "15ms", "0ms", "1234 ms"
-    let num: String = s.chars().filter(|c| c.is_ascii_digit()).collect();
-    num.parse::<i32>().ok()
+    s.chars().filter(|c| c.is_ascii_digit()).collect::<String>().parse::<i32>().ok()
 }
 
 fn parse_memory_kb(s: &str) -> Option<i32> {
-    // VJudge formats: "1024KB", "0KB", "1234 KB"
-    let num: String = s.chars().filter(|c| c.is_ascii_digit()).collect();
-    num.parse::<i32>().ok()
+    s.chars().filter(|c| c.is_ascii_digit()).collect::<String>().parse::<i32>().ok()
 }
 
 fn opt_str(s: Option<&str>) -> String {

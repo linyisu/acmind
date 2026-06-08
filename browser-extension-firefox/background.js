@@ -116,9 +116,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
 async function handleImport(payload) {
   if (payload.type === "problem-full") {
-    // Step 1: Import problem
-    console.log("[ACMind] Importing problem:", payload.problem.title);
-    const problemResp = await postToAcmind("/api/v1/import/vjudge/problem", {
+    console.log("[ACMind] Importing problem +", payload.submissions.length, "submissions");
+
+    const data = {
       source_problem_id: payload.problem.sourceProblemId,
       oj: payload.problem.oj,
       prob_num: payload.problem.probNum,
@@ -126,37 +126,28 @@ async function handleImport(payload) {
       url: payload.problem.url,
       statement: payload.problem.statement,
       tags: payload.problem.tags,
-    });
-    console.log("[ACMind] Problem imported:", problemResp);
-
-    // Step 2: Import each submission
-    let imported = 0;
-    for (const sub of payload.submissions) {
-      const data = {
-        run_id: String(sub.runId || ""),
+      submissions: payload.submissions.map((sub) => ({
         oj: sub.oj,
         prob_num: sub.probNum,
         status: sub.status,
         language: sub.language,
-        code: sub.code || "",
+        code: sub.code || null,
+        run_id: sub.runId ? String(sub.runId) : null,
         runtime: sub.runtime != null ? String(sub.runtime) : null,
         memory: sub.memory != null ? String(sub.memory) : null,
         submit_time: sub.time ? String(sub.time) : null,
-      };
-      console.log("[ACMind] Importing submission:", sub.runId, sub.status, sub.language);
-      try {
-        const resp = await postToAcmind("/api/v1/import/vjudge/submission", data);
-        console.log("[ACMind] Submission imported:", resp);
-        imported++;
-      } catch (e) {
-        console.error(`[ACMind] Failed to import submission ${sub.runId}:`, e.message);
-      }
-      // Small delay between submissions to avoid rate limiting
-      await sleep(200);
-    }
+      })),
+    };
 
-    console.log("[ACMind] Total imported:", imported, "/", payload.submissions.length);
-    return { success: true, problem: problemResp, submissions_imported: imported };
+    const resp = await postToAcmind("/api/v1/import/vjudge/problem-full", data);
+    console.log("[ACMind] Import result:", resp);
+    return {
+      success: true,
+      problem_id: resp.problem_id,
+      submissions_imported: resp.submissions_imported,
+      submissions_skipped: resp.submissions_skipped,
+      errors: resp.errors,
+    };
   }
 
   throw new Error(`Unknown payload type: ${payload.type}`);
