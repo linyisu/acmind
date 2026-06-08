@@ -15,6 +15,24 @@ import type {
   UpdateProblemRequest,
 } from "@acmind/shared";
 
+export interface AnalysisResult {
+  algorithm_type: string;
+  sub_type: string;
+  tags: string[];
+  summary: string;
+  template_snippet?: string | null;
+  error_analysis?: string | null;
+  suggested_difficulty?: number | null;
+}
+
+export interface AnalysisResp {
+  id: number;
+  target_type: string;
+  target_id: number;
+  result: AnalysisResult;
+  created_at: string;
+}
+
 export const problemsApi = {
   list: (tagId?: number) => {
     const q = tagId ? `?tag_id=${tagId}` : "";
@@ -49,6 +67,12 @@ export const tagsApi = {
   list: () => api.get<Tag[]>("/api/v1/tags"),
   create: (req: CreateTagRequest) => api.post<Tag>("/api/v1/tags", req),
   delete: (id: number) => api.delete<void>(`/api/v1/tags/${id}`),
+};
+
+export const aiApi = {
+  analyze: (submissionId: number) =>
+    api.post<AnalysisResp>(`/api/v1/ai/analyze/${submissionId}`),
+  list: () => api.get<AnalysisResp[]>("/api/v1/ai/analyses"),
 };
 
 export const analysisApi = {

@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Markdown from "react-markdown";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import vscDarkPlus from "react-syntax-highlighter/dist/esm/styles/prism/vsc-dark-plus";
-import { problemsApi, submissionsApi, tagsApi } from "@/lib/api";
+import { problemsApi, submissionsApi, tagsApi, aiApi } from "@/lib/api";
+import type { AnalysisResp } from "@/lib/api";
 import type { Submission } from "@acmind/shared";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -52,6 +53,16 @@ export default function ProblemDetailPage() {
   const navigate = useNavigate();
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
   const [copied, setCopied] = useState(false);
+  const [aiResult, setAiResult] = useState<AnalysisResp | null>(null);
+  const qc = useQueryClient();
+
+  const analyzeMut = useMutation({
+    mutationFn: (submissionId: number) => aiApi.analyze(submissionId),
+    onSuccess: (data) => {
+      setAiResult(data);
+      qc.invalidateQueries({ queryKey: ["ai-analyses"] });
+    },
+  });
 
   const problem = useQuery({
     queryKey: ["problems", Number(id)],
@@ -164,6 +175,7 @@ export default function ProblemDetailPage() {
                   <TableHead>Verdict</TableHead>
                   <TableHead>Runtime</TableHead>
                   <TableHead>Memory</TableHead>
+                  <TableHead className="w-12"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -184,6 +196,19 @@ export default function ProblemDetailPage() {
                     </TableCell>
                     <TableCell>{s.runtime_ms ?? "—"} ms</TableCell>
                     <TableCell>{s.memory_kb ?? "—"} KB</TableCell>
+                    <TableCell>
+                      <button
+                        className="rounded-md p-1 hover:bg-accent transition-colors"
+                        title="AI Analyze"
+                        disabled={analyzeMut.isPending}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          analyzeMut.mutate(s.id);
+                        }}
+                      >
+                        🤖
+                      </button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -244,6 +269,74 @@ export default function ProblemDetailPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* AI Analysis result dialog */}
+      <Dialog open={!!aiResult} onOpenChange={(open) => { if (!open) setAiResult(null); }}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              🤖 AI Analysis
+              {aiResult && (
+                <Badge variant="outline">{aiResult.result.algorithm_type}</Badge>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          {aiResult && (
+            <div className="space-y-4">
+              <div>
+                <h4 className="text-sm font-medium mb-1">Algorithm</h4>
+                <p className="text-sm text-muted-foreground">
+                  {aiResult.result.algorithm_type} / {aiResult.result.sub_type}
+                </p>
+              </div>
+              {aiResult.result.tags.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-medium mb-1">Tags</h4>
+                  <div className="flex flex-wrap gap-1">
+                    {aiResult.result.tags.map((t) => (
+                      <Badge key={t} variant="secondary">{t}</Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div>
+                <h4 className="text-sm font-medium mb-1">Summary</h4>
+                <p className="text-sm text-muted-foreground">{aiResult.result.summary}</p>
+              </div>
+              {aiResult.result.template_snippet && (
+                <div>
+                  <h4 className="text-sm font-medium mb-1">Template</h4>
+                  <SyntaxHighlighter
+                    language="cpp"
+                    style={vscDarkPlus}
+                    customStyle={{ margin: 0, borderRadius: "0.375rem", fontSize: "0.8rem" }}
+                  >
+                    {aiResult.result.template_snippet}
+                  </SyntaxHighlighter>
+                </div>
+              )}
+              {aiResult.result.error_analysis && (
+                <div>
+                  <h4 className="text-sm font-medium mb-1">Error Analysis</h4>
+                  <p className="text-sm text-destructive">{aiResult.result.error_analysis}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* AI loading indicator */}
+      {analyzeMut.isPending && (
+        <div className="fixed bottom-4 right-4 bg-primary text-primary-foreground px-4 py-2 rounded-lg shadow-lg text-sm animate-pulse">
+          🤖 Analyzing...
+        </div>
+      )}
+      {analyzeMut.isError && (
+        <div className="fixed bottom-4 right-4 bg-destructive text-destructive-foreground px-4 py-2 rounded-lg shadow-lg text-sm">
+          ❌ Analysis failed
+        </div>
+      )}
     </div>
   );
 }
