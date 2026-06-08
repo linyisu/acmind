@@ -4,12 +4,13 @@ import { useQuery } from "@tanstack/react-query";
 import Markdown from "react-markdown";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
-import { Light as SyntaxHighlighter } from "react-syntax-highlighter";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import vscDarkPlus from "react-syntax-highlighter/dist/esm/styles/prism/vsc-dark-plus";
-import cpp from "react-syntax-highlighter/dist/esm/languages/hljs/cpp";
-import python from "react-syntax-highlighter/dist/esm/languages/hljs/python";
-import java from "react-syntax-highlighter/dist/esm/languages/hljs/java";
-import rust from "react-syntax-highlighter/dist/esm/languages/hljs/rust";
+import cpp from "react-syntax-highlighter/dist/esm/languages/prism/cpp";
+import python from "react-syntax-highlighter/dist/esm/languages/prism/python";
+import java from "react-syntax-highlighter/dist/esm/languages/prism/java";
+import rust from "react-syntax-highlighter/dist/esm/languages/prism/rust";
+import c from "react-syntax-highlighter/dist/esm/languages/prism/c";
 import { problemsApi, submissionsApi, tagsApi } from "@/lib/api";
 import type { Submission } from "@acmind/shared";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,7 +33,7 @@ import {
 import { ExternalLink, Copy, Check } from "lucide-react";
 
 SyntaxHighlighter.registerLanguage("cpp", cpp);
-SyntaxHighlighter.registerLanguage("c", cpp);
+SyntaxHighlighter.registerLanguage("c", c);
 SyntaxHighlighter.registerLanguage("python", python);
 SyntaxHighlighter.registerLanguage("java", java);
 SyntaxHighlighter.registerLanguage("rust", rust);
@@ -206,7 +207,7 @@ export default function ProblemDetailPage() {
 
       {/* Submission code dialog */}
       <Dialog open={!!selectedSubmission} onOpenChange={(open) => { if (!open) setSelectedSubmission(null); }}>
-        <DialogContent className="w-[95vw] max-w-[1400px] h-[90vh] p-0 gap-0 overflow-hidden flex flex-col">
+        <DialogContent className="sm:max-w-none w-[95vw] max-w-[1400px] h-[90vh] p-0 gap-0 overflow-hidden flex flex-col">
           {/* Header bar */}
           <div className="flex items-center justify-between px-4 py-2.5 border-b bg-muted/30 shrink-0">
             <div className="flex items-center gap-2">
