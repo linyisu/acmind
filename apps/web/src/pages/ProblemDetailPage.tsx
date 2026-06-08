@@ -96,7 +96,7 @@ export default function ProblemDetailPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-6 max-w-5xl">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">{p.title}</h1>
@@ -196,7 +196,7 @@ export default function ProblemDetailPage() {
 
       {/* Submission code dialog */}
       <Dialog open={!!selectedSubmission} onOpenChange={(open) => { if (!open) setSelectedSubmission(null); }}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
+        <DialogContent className="max-w-5xl w-[90vw] max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <span>Submission #{selectedSubmission?.id}</span>
@@ -220,7 +220,7 @@ export default function ProblemDetailPage() {
                   margin: 0,
                   borderRadius: "0.375rem",
                   fontSize: "0.85rem",
-                  maxHeight: "60vh",
+                  minHeight: "300px",
                 }}
                 showLineNumbers
               >
