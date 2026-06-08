@@ -212,9 +212,8 @@ export default function ProblemDetailPage() {
                 </span>
               )}
             </div>
-            <Button variant="ghost" size="sm" className="gap-1.5" onClick={copyCode}>
-              {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-              {copied ? "Copied" : "Copy"}
+            <Button variant="ghost" size="icon" onClick={copyCode} title={copied ? "Copied" : "Copy"}>
+              {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
             </Button>
           </div>
           {/* Code area */}
