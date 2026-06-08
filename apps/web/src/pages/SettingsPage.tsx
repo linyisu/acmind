@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/stores/auth";
-import { tagsApi } from "@/lib/api";
+import { tagsApi, aiApi } from "@/lib/api";
 import {
   Card,
   CardContent,
@@ -18,7 +18,14 @@ export default function SettingsPage() {
   const user = useAuth((s) => s.user);
   const qc = useQueryClient();
   const [name, setName] = useState("");
+  const [aiTestResult, setAiTestResult] = useState<{ ok: boolean; message: string } | null>(null);
   const tags = useQuery({ queryKey: ["tags"], queryFn: () => tagsApi.list() });
+
+  const testAi = useMutation({
+    mutationFn: () => aiApi.test(),
+    onSuccess: (data) => setAiTestResult(data),
+    onError: () => setAiTestResult({ ok: false, message: "Request failed" }),
+  });
   const create = useMutation({
     mutationFn: () => tagsApi.create({ name: name.trim() }),
     onSuccess: () => {
@@ -34,6 +41,39 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6 max-w-2xl">
       <h1 className="text-2xl font-bold">Settings</h1>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>AI Analysis</CardTitle>
+          <CardDescription>Configure the AI provider for code analysis.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            AI settings are configured via environment variables on the server:
+          </p>
+          <div className="rounded-md bg-muted p-3 text-xs font-mono space-y-1">
+            <p>LLM_PROVIDER=openai</p>
+            <p>LLM_API_KEY=sk-...</p>
+            <p>LLM_BASE_URL=https://api.openai.com/v1</p>
+            <p>LLM_MODEL=gpt-4o-mini</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={testAi.isPending}
+              onClick={() => testAi.mutate()}
+            >
+              {testAi.isPending ? "Testing…" : "Test Connection"}
+            </Button>
+            {aiTestResult && (
+              <span className={`text-sm ${aiTestResult.ok ? "text-green-600" : "text-destructive"}`}>
+                {aiTestResult.ok ? "✅" : "❌"} {aiTestResult.message}
+              </span>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

@@ -73,6 +73,7 @@ export const aiApi = {
   analyze: (submissionId: number) =>
     api.post<AnalysisResp>(`/api/v1/ai/analyze/${submissionId}`),
   list: () => api.get<AnalysisResp[]>("/api/v1/ai/analyses"),
+  test: () => api.get<{ ok: boolean; message: string }>("/api/v1/ai/test"),
 };
 
 export const analysisApi = {

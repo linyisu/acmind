@@ -51,6 +51,9 @@ chrono = { version = "0.4", features = ["serde"] }
 async-trait = "0.1"
 md5 = "0.7"
 
+# HTTP 客户端（AI 调用）
+reqwest = { version = "0.12", features = ["json"] }
+
 [dev-dependencies]
 tower = { version = "0.5", features = ["util"] }
 http-body-util = "0.1"

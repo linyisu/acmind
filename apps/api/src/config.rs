@@ -10,6 +10,9 @@ pub struct Config {
     pub rate_limit_per_second: u64,
     pub rate_limit_burst: u32,
     pub llm_provider: String,
+    pub llm_api_key: String,
+    pub llm_base_url: String,
+    pub llm_model: String,
 }
 
 impl Config {
@@ -42,6 +45,11 @@ impl Config {
             .unwrap_or(20u32);
         let llm_provider = std::env::var("LLM_PROVIDER")
             .unwrap_or_else(|_| "noop".to_string());
+        let llm_api_key = std::env::var("LLM_API_KEY").unwrap_or_default();
+        let llm_base_url = std::env::var("LLM_BASE_URL")
+            .unwrap_or_else(|_| "https://api.openai.com/v1".to_string());
+        let llm_model = std::env::var("LLM_MODEL")
+            .unwrap_or_else(|_| "gpt-4o-mini".to_string());
         Ok(Config {
             database_url,
             api_port,
@@ -51,6 +59,9 @@ impl Config {
             rate_limit_per_second,
             rate_limit_burst,
             llm_provider,
+            llm_api_key,
+            llm_base_url,
+            llm_model,
         })
     }
 }
