@@ -6,11 +6,6 @@ import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import vscDarkPlus from "react-syntax-highlighter/dist/esm/styles/prism/vsc-dark-plus";
-import cpp from "react-syntax-highlighter/dist/esm/languages/prism/cpp";
-import python from "react-syntax-highlighter/dist/esm/languages/prism/python";
-import java from "react-syntax-highlighter/dist/esm/languages/prism/java";
-import rust from "react-syntax-highlighter/dist/esm/languages/prism/rust";
-import c from "react-syntax-highlighter/dist/esm/languages/prism/c";
 import { problemsApi, submissionsApi, tagsApi } from "@/lib/api";
 import type { Submission } from "@acmind/shared";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,12 +26,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ExternalLink, Copy, Check } from "lucide-react";
-
-SyntaxHighlighter.registerLanguage("cpp", cpp);
-SyntaxHighlighter.registerLanguage("c", c);
-SyntaxHighlighter.registerLanguage("python", python);
-SyntaxHighlighter.registerLanguage("java", java);
-SyntaxHighlighter.registerLanguage("rust", rust);
 
 const LANG_MAP: Record<string, string> = {
   "C++": "cpp",
