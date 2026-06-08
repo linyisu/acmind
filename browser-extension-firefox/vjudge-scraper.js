@@ -373,6 +373,36 @@
 		};
 	}
 
+	// ---- Fetch current logged-in username from VJudge ----
+	async function fetchCurrentUsername() {
+		// Try extracting from page first (works on status pages)
+		const fromPage = extractUsernameFromPage();
+		if (fromPage) return fromPage;
+
+		// Fetch the status page HTML and extract username from the embedded JS
+		try {
+			const html = await fetchText(`${VJUDGE_ORIGIN}/status`);
+			// VJudge embeds the username in inline script as a JS variable
+			const match = html.match(/var\s+username\s*=\s*"([^"]+)"/);
+			if (match) return match[1];
+
+			// Try to find it from user profile link in the navbar
+			const hrefMatch = html.match(/href="\/user\/([^"]+)"/);
+			if (hrefMatch) return hrefMatch[1];
+		} catch {}
+
+		// Last resort: call the status API with empty username and read the first result
+		// to check if VJudge returns the current user's data by default
+		try {
+			const resp = await fetchJSON(`${VJUDGE_ORIGIN}/status/data?draw=1&start=0&length=1&un=&OJId=All&probNum=&res=all&language=&onlyFollowee=false&orderBy=run_id`);
+			if (resp.data && resp.data.length > 0) {
+				return resp.data[0].user || resp.data[0].username || null;
+			}
+		} catch {}
+
+		return null;
+	}
+
 	// ---- Page info extractors ----
 	function extractUsernameFromPage() {
 		// Try multiple ways to extract username
@@ -497,15 +527,21 @@
 		// 1. Scrape problem info (title, statement, tags)
 		progress("Fetching problem info...");
 		const problem = await scrapeProblemPage();
+		console.log("[ACMind] Problem scraped:", problem.oj, problem.probNum, problem.title);
 
-		// 2. Scrape all user submissions for this problem
-		const username = extractUsernameFromPage();
-		progress(`Fetching submissions for ${problem.oj}-${problem.probNum}...`);
+		// 2. Get current logged-in username
+		const username = await fetchCurrentUsername();
+		console.log("[ACMind] Username:", username);
+		if (!username) {
+			throw new Error("Could not determine your VJudge username. Are you logged in?");
+		}
+		progress(`Fetching submissions for ${problem.oj}-${problem.probNum} (user: ${username})...`);
 		const submissions = await scrapeProblemSubmissions(
 			problem.oj,
 			problem.probNum,
 			username,
 		);
+		console.log("[ACMind] Submissions found:", submissions.length);
 
 		// 3. For each submission, try to fetch source code
 		progress(`Fetching source code for ${submissions.length} submissions...`);
@@ -519,6 +555,7 @@
 			}
 		}
 
+		console.log("[ACMind] Sending to ACMind:", submissions.length, "submissions");
 		return {
 			type: "problem-full",
 			problem,
