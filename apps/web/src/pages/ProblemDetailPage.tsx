@@ -15,6 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ExternalLink } from "lucide-react";
 
 const VERDICT_COLORS: Record<string, "default" | "destructive" | "secondary" | "outline"> = {
   AC: "default",
@@ -88,13 +89,11 @@ export default function ProblemDetailPage() {
       )}
 
       {p.url && (
-        <a
-          href={p.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-sm text-primary underline"
-        >
-          View on {p.source} →
+        <a href={p.url} target="_blank" rel="noopener noreferrer">
+          <Button variant="outline" size="sm" className="gap-1.5">
+            <ExternalLink className="h-3.5 w-3.5" />
+            View on {p.source}
+          </Button>
         </a>
       )}
 
