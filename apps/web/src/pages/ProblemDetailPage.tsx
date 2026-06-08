@@ -198,7 +198,7 @@ export default function ProblemDetailPage() {
       <Dialog open={!!selectedSubmission} onOpenChange={(open) => { if (!open) setSelectedSubmission(null); }}>
         <DialogContent className="sm:max-w-none w-[95vw] max-w-[1400px] h-[90vh] p-0 gap-0 overflow-hidden flex flex-col">
           {/* Header bar */}
-          <div className="flex items-center gap-2 px-4 py-2.5 border-b bg-muted/30 shrink-0 pr-20">
+          <div className="flex items-center gap-2 px-4 py-2.5 border-b bg-muted/30 shrink-0 pr-12">
             <span className="font-semibold text-sm">#{selectedSubmission?.id}</span>
             {selectedSubmission && (
               <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${verdictColor(selectedSubmission.verdict)}`}>
@@ -210,18 +210,16 @@ export default function ProblemDetailPage() {
                 {selectedSubmission.language} · {selectedSubmission.runtime_ms ?? "—"}ms · {selectedSubmission.memory_kb ?? "—"}KB
               </span>
             )}
-            <div className="ml-auto">
-              <button
-                onClick={copyCode}
-                title={copied ? "Copied" : "Copy"}
-                className="rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:outline-hidden"
-              >
-                {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
-              </button>
-            </div>
           </div>
           {/* Code area */}
-          <div className="flex-1 overflow-auto">
+          <div className="flex-1 overflow-auto relative">
+            <button
+              onClick={copyCode}
+              title={copied ? "Copied" : "Copy"}
+              className="absolute top-2 right-3 z-10 rounded-md bg-zinc-700 hover:bg-zinc-600 px-2 py-1 text-xs text-zinc-300 hover:text-white transition-colors"
+            >
+              {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+            </button>
             {selectedSubmission?.code ? (
               <SyntaxHighlighter
                 language={getLanguageHint(selectedSubmission.language)}
