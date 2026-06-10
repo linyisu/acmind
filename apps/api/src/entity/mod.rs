@@ -2,10 +2,15 @@
 
 pub mod prelude;
 
+pub mod ai_analysis;
 pub mod knowledge;
 pub mod knowledge_tag;
 pub mod problem;
 pub mod problem_tag;
 pub mod submission;
 pub mod tag;
+pub mod task;
+pub mod template;
+pub mod template_problem;
+pub mod template_tag;
 pub mod user;

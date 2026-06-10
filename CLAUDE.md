@@ -42,6 +42,27 @@ This project is indexed by GitNexus as **acmind** (1203 symbols, 2565 relationsh
 
 <!-- gitnexus:end -->
 
+## 项目架构
+
+后端模块遵循 **model → repo → service → route** 四层结构：
+- `model.rs` — 请求/响应 DTO
+- `repo.rs` — SeaORM 数据库查询
+- `service.rs` — 业务逻辑
+- `route.rs` — Axum handler
+
+AI 模块结构：
+- `ai/agents/` — 各 Agent 独立文件（classifier/template/error/knowledge）
+- `ai/orchestrator.rs` — 编排器，协调各 Agent + 管理任务进度
+- `ai/provider.rs` — LLM 调用抽象（含重试 + timeout）
+- `ai/parse.rs` — LLM 响应 JSON 解析（含 `<think>` 标签剥离）
+- `ai/prompt.rs` — System prompt 定义
+- `ai/context.rs` — 上下文收集 + diff 生成
+
+前端：
+- 页面在 `apps/web/src/pages/`，路由在 `router.tsx`
+- 全中文 UI，所有文案用中文
+- LaTeX 渲染用 `react-markdown` + `remark-math` + `rehype-katex`
+
 ## SeaORM Schema 变更工作流
 
 acmind 用 SeaORM 管理 Postgres schema。**所有 schema 变更必须走 migration 文件，绝不直接改老 migration**。

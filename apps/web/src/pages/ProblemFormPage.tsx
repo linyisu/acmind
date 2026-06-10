@@ -79,7 +79,7 @@ export default function ProblemFormPage() {
       navigate("/problems");
     },
     onError: (e) =>
-      setError(e instanceof ApiError ? e.message : "Failed to update problem"),
+      setError(e instanceof ApiError ? e.message : "更新失败"),
   });
 
   function addTag() {
@@ -95,7 +95,7 @@ export default function ProblemFormPage() {
           qc.invalidateQueries({ queryKey: ["tags"] });
           setTagIds([...tagIds, t.id]);
         })
-        .catch((e) => setError(e instanceof ApiError ? e.message : "Failed to create tag"));
+        .catch((e) => setError(e instanceof ApiError ? e.message : "创建标签失败"));
     }
     setTagInput("");
   }
@@ -112,30 +112,30 @@ export default function ProblemFormPage() {
   return (
     <Card className="max-w-2xl">
       <CardHeader>
-        <CardTitle>{isEdit ? "Edit problem" : "New problem"}</CardTitle>
+        <CardTitle>{isEdit ? "编辑题目" : "新建题目"}</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={onSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label>Source</Label>
+              <Label>来源</Label>
               <Input value={source} onChange={(e) => setSource(e.target.value)} required />
             </div>
             <div className="space-y-1.5">
-              <Label>External ID</Label>
+              <Label>外部 ID</Label>
               <Input value={externalId} onChange={(e) => setExternalId(e.target.value)} />
             </div>
           </div>
           <div className="space-y-1.5">
-            <Label>Title</Label>
+            <Label>标题</Label>
             <Input value={title} onChange={(e) => setTitle(e.target.value)} required />
           </div>
           <div className="space-y-1.5">
-            <Label>URL</Label>
+            <Label>链接</Label>
             <Input value={url} onChange={(e) => setUrl(e.target.value)} />
           </div>
           <div className="space-y-1.5">
-            <Label>Difficulty</Label>
+            <Label>难度</Label>
             <Input
               type="number"
               value={difficulty}
@@ -143,7 +143,7 @@ export default function ProblemFormPage() {
             />
           </div>
           <div className="space-y-1.5">
-            <Label>Statement</Label>
+            <Label>题面</Label>
             <textarea
               className="flex min-h-24 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               value={statement}
@@ -151,7 +151,7 @@ export default function ProblemFormPage() {
             />
           </div>
           <div className="space-y-1.5">
-            <Label>Tags</Label>
+            <Label>标签</Label>
             <div className="flex gap-2">
               <Input
                 value={tagInput}
@@ -162,10 +162,10 @@ export default function ProblemFormPage() {
                     addTag();
                   }
                 }}
-                placeholder="Type a tag and press Enter"
+                placeholder="输入标签名后按回车"
               />
               <Button type="button" variant="outline" onClick={addTag}>
-                Add
+                添加
               </Button>
             </div>
             <div className="flex flex-wrap gap-1 mt-2">
@@ -192,10 +192,10 @@ export default function ProblemFormPage() {
           {error && <p className="text-sm text-destructive">{error}</p>}
           <div className="flex justify-end gap-2">
             <Button type="button" variant="ghost" onClick={() => navigate("/problems")}>
-              Cancel
+              取消
             </Button>
             <Button type="submit" disabled={busy}>
-              {busy ? "Saving…" : isEdit ? "Save" : "Create"}
+              {busy ? "保存中…" : isEdit ? "保存" : "创建"}
             </Button>
           </div>
         </form>

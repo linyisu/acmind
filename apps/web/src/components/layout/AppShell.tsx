@@ -2,6 +2,7 @@ import { Outlet, useLocation } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import TopBar from "./TopBar";
 import PageTransition from "./PageTransition";
+import { ToastContainer } from "@/components/ui/toast";
 
 export default function AppShell() {
   const location = useLocation();
@@ -16,6 +17,7 @@ export default function AppShell() {
           </PageTransition>
         </main>
       </div>
+      <ToastContainer />
     </div>
   );
 }

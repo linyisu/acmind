@@ -25,7 +25,7 @@ export default function RegisterPage() {
       await register(username, email, password);
       navigate("/login");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Registration failed");
+      setError(err instanceof ApiError ? err.message : "注册失败");
     } finally {
       setBusy(false);
     }
@@ -41,12 +41,12 @@ export default function RegisterPage() {
       >
         <Card>
           <CardHeader>
-            <CardTitle>Register</CardTitle>
+            <CardTitle>注册 ACMind</CardTitle>
           </CardHeader>
           <CardContent>
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="space-y-1.5">
-              <Label>Username</Label>
+              <Label>用户名</Label>
               <Input
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
@@ -55,7 +55,7 @@ export default function RegisterPage() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label>Email</Label>
+              <Label>邮箱</Label>
               <Input
                 type="email"
                 value={email}
@@ -64,7 +64,7 @@ export default function RegisterPage() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label>Password (min 8)</Label>
+              <Label>密码（至少 8 位）</Label>
               <Input
                 type="password"
                 value={password}
@@ -75,12 +75,12 @@ export default function RegisterPage() {
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
             <Button type="submit" className="w-full" disabled={busy}>
-              {busy ? "Creating…" : "Create account"}
+              {busy ? "注册中…" : "注册"}
             </Button>
             <p className="text-sm text-muted-foreground text-center">
-              Already have an account?{" "}
+              已有账号？{" "}
               <Link to="/login" className="underline">
-                Sign in
+                登录
               </Link>
             </p>
           </form>

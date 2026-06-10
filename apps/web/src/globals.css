@@ -126,55 +126,57 @@ html, body, #root {
 }
 
 /* Markdown statement rendering */
-.statement-content h1 { font-size: 1.5em; font-weight: 700; margin: 1em 0 0.5em; }
-.statement-content h2 { font-size: 1.25em; font-weight: 600; margin: 0.8em 0 0.4em; }
-.statement-content h3 { font-size: 1.1em; font-weight: 600; margin: 0.6em 0 0.3em; }
-.statement-content p { margin: 0.5em 0; line-height: 1.7; }
-.statement-content ul, .statement-content ol { margin: 0.5em 0; padding-left: 1.5em; }
-.statement-content li { margin: 0.2em 0; }
-.statement-content code {
+.statement-content h1, .knowledge-content h1 { font-size: 1.5em; font-weight: 700; margin: 1em 0 0.5em; }
+.statement-content h2, .knowledge-content h2 { font-size: 1.25em; font-weight: 600; margin: 0.8em 0 0.4em; }
+.statement-content h3, .knowledge-content h3 { font-size: 1.1em; font-weight: 600; margin: 0.6em 0 0.3em; }
+.statement-content p, .knowledge-content p { margin: 0.5em 0; line-height: 1.7; }
+.statement-content ul, .statement-content ol,
+.knowledge-content ul, .knowledge-content ol { margin: 0.5em 0; padding-left: 1.5em; }
+.statement-content li, .knowledge-content li { margin: 0.2em 0; }
+.statement-content code, .knowledge-content code {
   background: var(--muted);
   padding: 0.15em 0.4em;
   border-radius: 3px;
   font-size: 0.9em;
   font-family: monospace;
 }
-.statement-content pre {
+.statement-content pre, .knowledge-content pre {
   background: var(--muted);
   padding: 0.75em 1em;
   border-radius: 6px;
   overflow-x: auto;
   margin: 0.5em 0;
 }
-.statement-content pre code {
+.statement-content pre code, .knowledge-content pre code {
   background: none;
   padding: 0;
 }
-.statement-content blockquote {
+.statement-content blockquote, .knowledge-content blockquote {
   border-left: 3px solid var(--border);
   padding-left: 1em;
   color: var(--muted-foreground);
   margin: 0.5em 0;
 }
-.statement-content table {
+.statement-content table, .knowledge-content table {
   border-collapse: collapse;
   width: 100%;
   margin: 0.5em 0;
 }
-.statement-content th, .statement-content td {
+.statement-content th, .statement-content td,
+.knowledge-content th, .knowledge-content td {
   border: 1px solid var(--border);
   padding: 0.4em 0.8em;
   text-align: left;
 }
-.statement-content th {
+.statement-content th, .knowledge-content th {
   background: var(--muted);
   font-weight: 600;
 }
-.statement-content img {
+.statement-content img, .knowledge-content img {
   max-width: 100%;
   height: auto;
 }
-.statement-content hr {
+.statement-content hr, .knowledge-content hr {
   border: none;
   border-top: 1px solid var(--border);
   margin: 1em 0;

@@ -6,14 +6,14 @@ use crate::{
 };
 use axum::{
     extract::{Path, State},
-    Extension, Json, Router,
     routing::{delete, get},
+    Extension, Json, Router,
 };
 
 pub fn protected_router() -> Router<AppState> {
     Router::new()
         .route("/tags", get(list).post(create))
-        .route("/tags/:id", delete(remove))
+        .route("/tags/{id}", delete(remove))
 }
 
 async fn list(

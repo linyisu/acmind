@@ -54,6 +54,14 @@ impl<'a> SubmissionService<'a> {
         .await?;
         Ok(to_resp(row))
     }
+
+    pub async fn delete(&self, user_id: i64, id: i64) -> AppResult<()> {
+        let deleted = repo::delete_by_id(&self.state.db, user_id, id).await?;
+        if !deleted {
+            return Err(AppError::NotFound);
+        }
+        Ok(())
+    }
 }
 
 fn to_resp(row: SubmissionRow) -> SubmissionResp {

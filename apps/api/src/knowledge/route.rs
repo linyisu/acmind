@@ -9,17 +9,14 @@ use crate::{
 };
 use axum::{
     extract::{Path, State},
-    Extension, Json, Router,
     routing::get,
+    Extension, Json, Router,
 };
 
 pub fn protected_router() -> Router<AppState> {
     Router::new()
         .route("/knowledge", get(list).post(create))
-        .route(
-            "/knowledge/:id",
-            get(get_one).patch(update).delete(remove),
-        )
+        .route("/knowledge/{id}", get(get_one).patch(update).delete(remove))
 }
 
 async fn list(

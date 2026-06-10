@@ -9,15 +9,15 @@ use crate::{
 };
 use axum::{
     extract::{Path, Query, State},
-    Extension, Json, Router,
     routing::get,
+    Extension, Json, Router,
 };
 use serde::Deserialize;
 
 pub fn protected_router() -> Router<AppState> {
     Router::new()
         .route("/submissions", get(list).post(create))
-        .route("/submissions/:id", get(get_one))
+        .route("/submissions/{id}", get(get_one).delete(remove))
 }
 
 #[derive(Deserialize)]
@@ -51,4 +51,14 @@ async fn create(
 ) -> AppResult<Json<SubmissionResp>> {
     let svc = SubmissionService::new(&state);
     Ok(Json(svc.create(ctx.user_id, req).await?))
+}
+
+async fn remove(
+    State(state): State<AppState>,
+    Extension(ctx): Extension<UserContext>,
+    Path(id): Path<i64>,
+) -> AppResult<Json<()>> {
+    let svc = SubmissionService::new(&state);
+    svc.delete(ctx.user_id, id).await?;
+    Ok(Json(()))
 }

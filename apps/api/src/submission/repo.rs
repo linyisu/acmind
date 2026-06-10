@@ -92,6 +92,22 @@ pub async fn problem_belongs_to_user(
     Ok(db.query_one(stmt).await?.is_some())
 }
 
+pub async fn delete_by_id(
+    db: &DatabaseConnection,
+    user_id: i64,
+    id: i64,
+) -> AppResult<bool> {
+    let stmt = Statement::from_string(
+        DbBackend::Postgres,
+        format!(
+            "DELETE FROM submission WHERE id = {} AND user_id = {}",
+            id, user_id
+        ),
+    );
+    let result = db.execute(stmt).await?;
+    Ok(result.rows_affected() > 0)
+}
+
 pub fn row_to_submission(row: sea_orm::QueryResult) -> Option<SubmissionRow> {
     Some(SubmissionRow {
         id: row.try_get_by::<i64, _>("id").ok()?,

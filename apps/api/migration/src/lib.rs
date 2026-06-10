@@ -7,6 +7,9 @@ mod m20260101_000004_create_knowledge;
 mod m20260101_000005_create_tag;
 mod m20260101_000006_create_join_tables;
 mod m20260608_142216_create_ai_analysis;
+mod m20260609_090000_create_task;
+mod m20260610_090000_create_template;
+mod m20260610_100000_add_template_summary;
 
 pub struct Migrator;
 
@@ -21,6 +24,9 @@ impl MigratorTrait for Migrator {
             Box::new(m20260101_000005_create_tag::Migration),
             Box::new(m20260101_000006_create_join_tables::Migration),
             Box::new(m20260608_142216_create_ai_analysis::Migration),
+            Box::new(m20260609_090000_create_task::Migration),
+            Box::new(m20260610_090000_create_template::Migration),
+            Box::new(m20260610_100000_add_template_summary::Migration),
         ]
     }
 }

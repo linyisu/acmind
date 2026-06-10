@@ -24,7 +24,7 @@ export default function LoginPage() {
       await login(username, password);
       navigate("/");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Login failed");
+      setError(err instanceof ApiError ? err.message : "登录失败");
     } finally {
       setBusy(false);
     }
@@ -40,12 +40,12 @@ export default function LoginPage() {
       >
         <Card>
           <CardHeader>
-            <CardTitle>Sign in to ACMind</CardTitle>
+            <CardTitle>登录 ACMind</CardTitle>
           </CardHeader>
           <CardContent>
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="username">Username</Label>
+              <Label htmlFor="username">用户名</Label>
               <Input
                 id="username"
                 value={username}
@@ -55,7 +55,7 @@ export default function LoginPage() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">密码</Label>
               <Input
                 id="password"
                 type="password"
@@ -67,12 +67,12 @@ export default function LoginPage() {
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
             <Button type="submit" className="w-full" disabled={busy}>
-              {busy ? "Signing in…" : "Sign in"}
+              {busy ? "登录中…" : "登录"}
             </Button>
             <p className="text-sm text-muted-foreground text-center">
-              No account?{" "}
+              没有账号？{" "}
               <Link to="/register" className="underline">
-                Register
+                注册
               </Link>
             </p>
           </form>

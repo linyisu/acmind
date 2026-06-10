@@ -33,27 +33,27 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6 max-w-2xl">
-      <h1 className="text-2xl font-bold">Settings</h1>
+      <h1 className="text-2xl font-bold">设置</h1>
 
       <Card>
         <CardHeader>
-          <CardTitle>Account</CardTitle>
-          <CardDescription>Logged in as</CardDescription>
+          <CardTitle>账户</CardTitle>
+          <CardDescription>当前登录用户</CardDescription>
         </CardHeader>
         <CardContent className="space-y-1">
           <p>
-            <strong>Username:</strong> {user?.username}
+            <strong>用户名：</strong> {user?.username}
           </p>
           <p>
-            <strong>Email:</strong> {user?.email}
+            <strong>邮箱：</strong> {user?.email}
           </p>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Tags</CardTitle>
-          <CardDescription>Manage your tag vocabulary.</CardDescription>
+          <CardTitle>标签管理</CardTitle>
+          <CardDescription>管理你的标签词库。</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <form
@@ -64,22 +64,22 @@ export default function SettingsPage() {
             className="flex gap-2"
           >
             <div className="flex-1 space-y-1.5">
-              <Label htmlFor="tag-name">New tag</Label>
+              <Label htmlFor="tag-name">新建标签</Label>
               <Input
                 id="tag-name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. binary-search"
+                placeholder="如 binary-search"
               />
             </div>
             <div className="flex items-end">
               <Button type="submit" disabled={!name.trim() || create.isPending}>
-                Add
+                添加
               </Button>
             </div>
           </form>
           {tags.isLoading ? (
-            <p>Loading…</p>
+            <p>加载中…</p>
           ) : tags.data && tags.data.length > 0 ? (
             <div className="flex flex-wrap gap-2">
               {tags.data.map((t) => (
@@ -92,7 +92,7 @@ export default function SettingsPage() {
                     type="button"
                     className="ml-1 opacity-70 hover:opacity-100"
                     onClick={() => {
-                      if (confirm(`Delete tag "${t.name}"?`)) remove.mutate(t.id);
+                      if (confirm(`确认删除标签「${t.name}」？`)) remove.mutate(t.id);
                     }}
                   >
                     ×

@@ -5,14 +5,19 @@ import type {
   CreateProblemRequest,
   CreateSubmissionRequest,
   CreateTagRequest,
+  CreateTemplateRequest,
   DifficultyBucket,
   Knowledge,
   Problem,
   Submission,
   Tag,
+  Template,
+  TemplateCategory,
+  TemplateStats,
   TimelinePoint,
   UpdateKnowledgeRequest,
   UpdateProblemRequest,
+  UpdateTemplateRequest,
 } from "@acmind/shared";
 
 export interface AnalysisResult {
@@ -31,6 +36,15 @@ export interface AnalysisResp {
   target_id: number;
   result: AnalysisResult;
   created_at: string;
+}
+
+export interface ProblemAnalysisResp {
+  analysis: AnalysisResp;
+  extracted_templates: number;
+  extracted_errors: number;
+  extracted_knowledge: number;
+  submissions_analyzed: number;
+  knowledge_merged: number;
 }
 
 export const problemsApi = {
@@ -52,6 +66,7 @@ export const submissionsApi = {
   },
   get: (id: number) => api.get<Submission>(`/api/v1/submissions/${id}`),
   create: (req: CreateSubmissionRequest) => api.post<Submission>("/api/v1/submissions", req),
+  delete: (id: number) => api.delete<void>(`/api/v1/submissions/${id}`),
 };
 
 export const knowledgeApi = {
@@ -69,9 +84,43 @@ export const tagsApi = {
   delete: (id: number) => api.delete<void>(`/api/v1/tags/${id}`),
 };
 
+export const templatesApi = {
+  list: (params?: {
+    category?: TemplateCategory;
+    language?: string;
+    tag_id?: number;
+    problem_id?: number;
+    search?: string;
+    sort?: string;
+  }) => {
+    const sp = new URLSearchParams();
+    if (params?.category) sp.set("category", params.category);
+    if (params?.language) sp.set("language", params.language);
+    if (params?.tag_id) sp.set("tag_id", String(params.tag_id));
+    if (params?.problem_id) sp.set("problem_id", String(params.problem_id));
+    if (params?.search) sp.set("search", params.search);
+    if (params?.sort) sp.set("sort", params.sort);
+    const q = sp.toString() ? `?${sp.toString()}` : "";
+    return api.get<Template[]>(`/api/v1/templates${q}`);
+  },
+  get: (id: number) => api.get<Template>(`/api/v1/templates/${id}`),
+  create: (req: CreateTemplateRequest) =>
+    api.post<Template>("/api/v1/templates", req),
+  update: (id: number, req: UpdateTemplateRequest) =>
+    api.patch<Template>(`/api/v1/templates/${id}`, req),
+  delete: (id: number) => api.delete<void>(`/api/v1/templates/${id}`),
+  linkProblem: (templateId: number, problemId: number) =>
+    api.post<void>(`/api/v1/templates/${templateId}/problems/${problemId}`),
+  unlinkProblem: (templateId: number, problemId: number) =>
+    api.delete<void>(`/api/v1/templates/${templateId}/problems/${problemId}`),
+  stats: () => api.get<TemplateStats>("/api/v1/templates/stats"),
+};
+
 export const aiApi = {
   analyze: (submissionId: number) =>
     api.post<AnalysisResp>(`/api/v1/ai/analyze/${submissionId}`),
+  analyzeProblem: (problemId: number) =>
+    api.post<Task>(`/api/v1/ai/analyze-problem/${problemId}`),
   list: () => api.get<AnalysisResp[]>("/api/v1/ai/analyses"),
   test: () => api.get<{ ok: boolean; message: string }>("/api/v1/ai/test"),
 };
@@ -87,4 +136,43 @@ export const analysisApi = {
   },
   difficultyDistribution: () =>
     api.get<DifficultyBucket[]>("/api/v1/analysis/problems/difficulty-distribution"),
+};
+
+export interface AgentStep {
+  label: string;
+  status: string;
+  detail: string;
+}
+
+export interface AgentProgress {
+  id: string;
+  name: string;
+  icon: string;
+  status: string;
+  message: string;
+  steps: AgentStep[];
+}
+
+export interface TaskProgress {
+  agents: AgentProgress[];
+}
+
+export interface Task {
+  id: number;
+  kind: string;
+  status: string;
+  target_type: string;
+  target_id: number;
+  progress: TaskProgress;
+  result: Record<string, unknown> | null;
+  error: string | null;
+  created_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+}
+
+export const tasksApi = {
+  list: () => api.get<Task[]>("/api/v1/tasks"),
+  get: (id: number) => api.get<Task>(`/api/v1/tasks/${id}`),
+  cancel: (id: number) => api.delete<boolean>(`/api/v1/tasks/${id}`),
 };

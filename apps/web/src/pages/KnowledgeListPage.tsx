@@ -1,5 +1,9 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import Markdown from "react-markdown";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
 import { knowledgeApi, problemsApi, tagsApi } from "@/lib/api";
 import type { Knowledge, KnowledgeKind, Tag } from "@acmind/shared";
 import {
@@ -10,17 +14,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -28,200 +22,137 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { toast } from "@/lib/stores/toast";
+import { Search } from "lucide-react";
 
 const KINDS: KnowledgeKind[] = ["template", "technique", "note", "snippet"];
+const KIND_LABELS: Record<string, string> = {
+  template: "模板",
+  technique: "技巧",
+  note: "笔记",
+  snippet: "代码片段",
+};
 
 export default function KnowledgeListPage() {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const knowledge = useQuery({ queryKey: ["knowledge"], queryFn: () => knowledgeApi.list() });
-  const problems = useQuery({ queryKey: ["problems"], queryFn: () => problemsApi.list() });
   const tags = useQuery({ queryKey: ["tags"], queryFn: () => tagsApi.list() });
+  const problems = useQuery({ queryKey: ["problems"], queryFn: () => problemsApi.list() });
 
-  const [open, setOpen] = useState(false);
-  const [title, setTitle] = useState("");
-  const [kind, setKind] = useState<KnowledgeKind>("note");
-  const [content, setContent] = useState("");
-  const [problemId, setProblemId] = useState<string>("none");
-  const [tagInput, setTagInput] = useState("");
-  const [tagIds, setTagIds] = useState<number[]>([]);
-
-  const create = useMutation({
-    mutationFn: () =>
-      knowledgeApi.create({
-        title,
-        kind,
-        content,
-        problem_id: problemId === "none" ? undefined : Number(problemId),
-        tag_ids: tagIds,
-      }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["knowledge"] });
-      setOpen(false);
-      setTitle("");
-      setContent("");
-      setProblemId("none");
-      setTagInput("");
-      setTagIds([]);
-    },
-  });
+  const [search, setSearch] = useState("");
+  const [kindFilter, setKindFilter] = useState<string>("all");
+  const [tagFilter, setTagFilter] = useState<string>("all");
 
   const remove = useMutation({
     mutationFn: (id: number) => knowledgeApi.delete(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["knowledge"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["knowledge"] });
+      toast.success("知识条目已删除");
+    },
+    onError: () => toast.error("删除失败"),
   });
 
-  function addTag() {
-    const name = tagInput.trim();
-    if (!name) return;
-    const existing = tags.data?.find((t) => t.name === name);
-    if (existing) {
-      if (!tagIds.includes(existing.id)) setTagIds([...tagIds, existing.id]);
-    } else {
-      tagsApi
-        .create({ name })
-        .then((t) => {
-          qc.invalidateQueries({ queryKey: ["tags"] });
-          setTagIds([...tagIds, t.id]);
-        })
-        .catch(() => {});
+  const filtered = useMemo(() => {
+    if (!knowledge.data) return [];
+    let list = knowledge.data;
+
+    if (kindFilter !== "all") {
+      list = list.filter((k) => k.kind === kindFilter);
     }
-    setTagInput("");
-  }
+
+    if (tagFilter !== "all") {
+      const tid = Number(tagFilter);
+      list = list.filter((k) => k.tag_ids.includes(tid));
+    }
+
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      list = list.filter(
+        (k) =>
+          k.title.toLowerCase().includes(q) ||
+          k.content.toLowerCase().includes(q),
+      );
+    }
+
+    return list;
+  }, [knowledge.data, kindFilter, tagFilter, search]);
 
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Knowledge</CardTitle>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button>New</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>New knowledge</DialogTitle>
-              <DialogDescription>Templates, techniques, notes, snippets.</DialogDescription>
-            </DialogHeader>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (title && content) create.mutate();
-              }}
-              className="space-y-3"
-            >
-              <div className="space-y-1.5">
-                <Label>Title</Label>
-                <Input value={title} onChange={(e) => setTitle(e.target.value)} required />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Kind</Label>
-                <Select value={kind} onValueChange={(v) => setKind(v as KnowledgeKind)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {KINDS.map((k) => (
-                      <SelectItem key={k} value={k}>
-                        {k}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Linked problem (optional)</Label>
-                <Select value={problemId} onValueChange={setProblemId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="None" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">— none —</SelectItem>
-                    {problems.data?.map((p) => (
-                      <SelectItem key={p.id} value={String(p.id)}>
-                        {p.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Content</Label>
-                <textarea
-                  className="flex min-h-32 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Tags</Label>
-                <div className="flex gap-2">
-                  <Input
-                    value={tagInput}
-                    onChange={(e) => setTagInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        addTag();
-                      }
-                    }}
-                    placeholder="Type and press Enter"
-                  />
-                  <Button type="button" variant="outline" onClick={addTag}>
-                    Add
-                  </Button>
-                </div>
-                <div className="flex flex-wrap gap-1 mt-2">
-                  {tagIds.map((tid) => {
-                    const t = tags.data?.find((x) => x.id === tid);
-                    return (
-                      <span
-                        key={tid}
-                        className="inline-flex items-center rounded-md bg-accent px-2 py-0.5 text-xs"
-                      >
-                        {t?.name ?? tid}
-                        <button
-                          type="button"
-                          className="ml-1 opacity-70 hover:opacity-100"
-                          onClick={() => setTagIds(tagIds.filter((x) => x !== tid))}
-                        >
-                          ×
-                        </button>
-                      </span>
-                    );
-                  })}
-                </div>
-              </div>
-              <DialogFooter>
-                <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={create.isPending || !title || !content}>
-                  {create.isPending ? "Creating…" : "Create"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <CardTitle>知识库</CardTitle>
+        <Button onClick={() => navigate("/knowledge/new")}>新建</Button>
       </CardHeader>
       <CardContent>
+        {/* Filters */}
+        <div className="flex flex-wrap gap-3 mb-4">
+          <div className="relative flex-1 min-w-48">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="搜索标题或内容…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-8"
+            />
+          </div>
+          <Select value={kindFilter} onValueChange={setKindFilter}>
+            <SelectTrigger className="w-32">
+              <SelectValue placeholder="Kind" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全部类型</SelectItem>
+              {KINDS.map((k) => (
+                <SelectItem key={k} value={k}>
+                  {KIND_LABELS[k] ?? k}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={tagFilter} onValueChange={setTagFilter}>
+            <SelectTrigger className="w-36">
+              <SelectValue placeholder="Tag" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全部标签</SelectItem>
+              {tags.data?.map((t) => (
+                <SelectItem key={t.id} value={String(t.id)}>
+                  {t.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Results count */}
+        {knowledge.data && knowledge.data.length > 0 && (
+          <p className="text-xs text-muted-foreground mb-3">
+            显示 {filtered.length} / {knowledge.data.length} 条
+          </p>
+        )}
+
         {knowledge.isLoading ? (
-          <p>Loading…</p>
-        ) : knowledge.data && knowledge.data.length > 0 ? (
+          <p>加载中…</p>
+        ) : filtered.length > 0 ? (
           <div className="space-y-2">
-            {knowledge.data.map((k) => (
+            {filtered.map((k) => (
               <KnowledgeRow
                 key={k.id}
                 k={k}
                 tags={tags.data ?? []}
                 problems={problems.data ?? []}
+                onView={() => navigate(`/knowledge/${k.id}`)}
+                onEdit={() => navigate(`/knowledge/${k.id}/edit`)}
                 onDelete={() => {
-                  if (confirm(`Delete "${k.title}"?`)) remove.mutate(k.id);
+                  if (confirm(`确认删除「${k.title}」？`)) remove.mutate(k.id);
                 }}
               />
             ))}
           </div>
+        ) : knowledge.data && knowledge.data.length > 0 ? (
+          <p className="text-muted-foreground">没有匹配的知识条目。</p>
         ) : (
-          <p className="text-muted-foreground">No knowledge entries yet.</p>
+          <p className="text-muted-foreground">还没有知识条目，点击「新建」开始。</p>
         )}
       </CardContent>
     </Card>
@@ -232,36 +163,64 @@ function KnowledgeRow({
   k,
   tags,
   problems,
+  onView,
+  onEdit,
   onDelete,
 }: {
   k: Knowledge;
   tags: Tag[];
   problems: { id: number; title: string }[];
+  onView: () => void;
+  onEdit: () => void;
   onDelete: () => void;
 }) {
-  const tagNames = k.tag_ids.map((id) => tags.find((t) => t.id === id)?.name).filter(Boolean) as string[];
-  const linked = k.problem_id ? problems.find((p) => p.id === k.problem_id)?.title : null;
+  const tagNames = k.tag_ids
+    .map((id) => tags.find((t) => t.id === id)?.name)
+    .filter(Boolean) as string[];
+  const linked = k.problem_id
+    ? problems.find((p) => p.id === k.problem_id)?.title
+    : null;
+
+  // No truncation here — render full content as Markdown with line-clamp via CSS
+
   return (
-    <div className="rounded-md border border-border p-4 space-y-2">
+    <div
+      className="rounded-md border border-border p-4 space-y-2 cursor-pointer hover:bg-accent/30 transition-colors"
+      onClick={onView}
+    >
       <div className="flex items-start justify-between gap-2">
-        <div>
+        <div className="min-w-0">
           <h3 className="font-medium">{k.title}</h3>
-          <p className="text-xs text-muted-foreground">
-            <Badge variant="outline" className="mr-2">
-              {k.kind}
+          <div className="flex items-center gap-2 mt-0.5">
+            <Badge variant="outline" className="text-xs">
+              {KIND_LABELS[k.kind] ?? k.kind}
             </Badge>
-            {linked && <span>↳ {linked}</span>}
-          </p>
+            {linked && (
+              <span className="text-xs text-muted-foreground">↳ {linked}</span>
+            )}
+            <span className="text-xs text-muted-foreground">
+              {new Date(k.updated_at).toLocaleDateString()}
+            </span>
+          </div>
         </div>
-        <Button size="sm" variant="destructive" onClick={onDelete}>
-          Delete
-        </Button>
+        <div className="flex gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+          <Button size="sm" variant="outline" onClick={onEdit}>
+            Edit
+          </Button>
+          <Button size="sm" variant="destructive" onClick={onDelete}>
+            Delete
+          </Button>
+        </div>
       </div>
-      <p className="text-sm whitespace-pre-wrap">{k.content}</p>
+      <div className="text-sm text-muted-foreground line-clamp-2 knowledge-content">
+        <Markdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
+          {k.content}
+        </Markdown>
+      </div>
       {tagNames.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {tagNames.map((n) => (
-            <Badge key={n} variant="secondary">
+            <Badge key={n} variant="secondary" className="text-xs">
               {n}
             </Badge>
           ))}

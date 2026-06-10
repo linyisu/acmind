@@ -11,11 +11,11 @@ path = "src/main.rs"
 
 [dependencies]
 # Web
-axum = { version = "0.7", features = ["macros"] }
+axum = { version = "0.8", features = ["macros"] }
 tokio = { version = "1", features = ["full"] }
 tower = "0.5"
 tower-http = { version = "0.6", features = ["trace", "cors"] }
-tower_governor = "0.4"
+tower_governor = "0.8"
 
 # DB
 sea-orm = { version = "1.1", features = [
@@ -50,6 +50,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 chrono = { version = "0.4", features = ["serde"] }
 async-trait = "0.1"
 md5 = "0.7"
+similar = "2"
 
 # HTTP 客户端（AI 调用）
 reqwest = { version = "0.12", features = ["json"] }

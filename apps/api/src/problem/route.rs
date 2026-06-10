@@ -9,18 +9,15 @@ use crate::{
 };
 use axum::{
     extract::{Path, Query, State},
-    Extension, Json, Router,
     routing::get,
+    Extension, Json, Router,
 };
 use serde::Deserialize;
 
 pub fn protected_router() -> Router<AppState> {
     Router::new()
         .route("/problems", get(list).post(create))
-        .route(
-            "/problems/:id",
-            get(get_one).patch(update).delete(remove),
-        )
+        .route("/problems/{id}", get(get_one).patch(update).delete(remove))
 }
 
 #[derive(Deserialize)]

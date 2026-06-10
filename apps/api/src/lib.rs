@@ -12,6 +12,8 @@ pub mod problem;
 pub mod state;
 pub mod submission;
 pub mod tag;
+pub mod task;
+pub mod template;
 
 use axum::{middleware, Router};
 use std::sync::Arc;
@@ -48,7 +50,7 @@ pub fn build_router(state: state::AppState) -> Router {
     let api_v1 = Router::new()
         .merge(
             auth::route::public_router()
-                .layer(GovernorLayer { config: auth_config }),
+                .layer(GovernorLayer::new(auth_config)),
         )
         .merge(auth::route::protected_router().route_layer(auth_layer.clone()))
         .merge(problem::route::protected_router().route_layer(auth_layer.clone()))
@@ -57,12 +59,14 @@ pub fn build_router(state: state::AppState) -> Router {
         .merge(tag::route::protected_router().route_layer(auth_layer.clone()))
         .merge(analysis::route::protected_router().route_layer(auth_layer.clone()))
         .merge(import::route::protected_router().route_layer(auth_layer.clone()))
-        .merge(ai::route::protected_router().route_layer(auth_layer));
+        .merge(ai::route::protected_router().route_layer(auth_layer.clone()))
+        .merge(task::route::protected_router().route_layer(auth_layer.clone()))
+        .merge(template::route::protected_router().route_layer(auth_layer));
 
     Router::new()
         .merge(health::router())
         .nest("/api/v1", api_v1)
-        .layer(GovernorLayer { config: general_config })
+        .layer(GovernorLayer::new(general_config))
         .layer(
             CorsLayer::new()
                 .allow_origin(Any)

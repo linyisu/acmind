@@ -14,11 +14,11 @@ export default function DashboardPage() {
   const knowledge = useQuery({ queryKey: ["knowledge"], queryFn: () => knowledgeApi.list() });
 
   const cards = [
-    { title: "Problems", value: problems.data?.length ?? 0, to: "/problems", loading: problems.isLoading },
-    { title: "Submissions", value: submissions.data?.length ?? 0, to: "/submissions", loading: submissions.isLoading },
-    { title: "Knowledge", value: knowledge.data?.length ?? 0, to: "/knowledge", loading: knowledge.isLoading },
+    { title: "题目", value: problems.data?.length ?? 0, to: "/problems", loading: problems.isLoading },
+    { title: "提交", value: submissions.data?.length ?? 0, to: "/problems", loading: submissions.isLoading },
+    { title: "知识条目", value: knowledge.data?.length ?? 0, to: "/knowledge", loading: knowledge.isLoading },
     {
-      title: "AC rate",
+      title: "AC 率",
       value: summary.data ? `${(summary.data.ac_rate * 100).toFixed(0)}%` : "—",
       to: "/analysis",
       loading: summary.isLoading,
@@ -27,7 +27,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Dashboard</h1>
+      <h1 className="text-2xl font-bold">仪表盘</h1>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {cards.map((c, i) => (
           <StatCard key={c.title} index={i} {...c} />

@@ -1,15 +1,16 @@
 import { NavLink } from "react-router-dom";
 import { motion } from "motion/react";
-import { Home, ListChecks, GitPullRequest, BookOpen, BarChart3, Settings } from "lucide-react";
+import { Home, ListChecks, BookOpen, BarChart3, Code2, Activity, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const items = [
-  { to: "/", label: "Dashboard", icon: Home },
-  { to: "/problems", label: "Problems", icon: ListChecks },
-  { to: "/submissions", label: "Submissions", icon: GitPullRequest },
-  { to: "/knowledge", label: "Knowledge", icon: BookOpen },
-  { to: "/analysis", label: "Analysis", icon: BarChart3 },
-  { to: "/settings", label: "Settings", icon: Settings },
+  { to: "/", label: "仪表盘", icon: Home },
+  { to: "/problems", label: "题目", icon: ListChecks },
+  { to: "/templates", label: "模板库", icon: Code2 },
+  { to: "/knowledge", label: "知识库", icon: BookOpen },
+  { to: "/analysis", label: "数据分析", icon: BarChart3 },
+  { to: "/tasks", label: "任务中心", icon: Activity },
+  { to: "/settings", label: "设置", icon: Settings },
 ];
 
 export default function Sidebar() {

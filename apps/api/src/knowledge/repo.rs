@@ -122,6 +122,19 @@ pub async fn replace_tags(
     Ok(())
 }
 
+pub async fn list_by_problem_id(
+    db: &DatabaseConnection,
+    user_id: i64,
+    problem_id: i64,
+) -> AppResult<Vec<knowledge::Model>> {
+    Ok(knowledge::Entity::find()
+        .filter(knowledge::Column::UserId.eq(user_id))
+        .filter(knowledge::Column::ProblemId.eq(problem_id))
+        .order_by_desc(knowledge::Column::UpdatedAt)
+        .all(db)
+        .await?)
+}
+
 pub async fn delete(db: &DatabaseConnection, user_id: i64, id: i64) -> AppResult<bool> {
     let res = knowledge::Entity::delete_many()
         .filter(knowledge::Column::Id.eq(id))

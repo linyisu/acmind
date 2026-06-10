@@ -25,3 +25,39 @@ pub struct AnalysisResp {
     pub result: AnalysisResult,
     pub created_at: DateTime<Utc>,
 }
+
+/// POST /api/v1/ai/analyze-problem/{problem_id} response.
+#[derive(Debug, Serialize)]
+pub struct ProblemAnalysisResp {
+    pub analysis: AnalysisResp,
+    pub extracted_templates: usize,
+    pub extracted_errors: usize,
+    pub extracted_knowledge: usize,
+    pub submissions_analyzed: usize,
+    pub knowledge_merged: usize,
+}
+
+/// LLM extraction response types (used by AI agents).
+#[derive(Debug, Deserialize)]
+pub struct ExtractedTemplate {
+    pub title: String,
+    pub code: String,
+    pub description: String,
+    #[serde(default)]
+    pub category: String,
+    #[serde(default)]
+    pub time_complexity: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ExtractedError {
+    pub title: String,
+    pub description: String,
+    pub fix_suggestion: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ExtractedKnowledge {
+    pub title: String,
+    pub content: String,
+}

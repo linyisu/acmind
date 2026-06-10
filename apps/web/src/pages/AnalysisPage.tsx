@@ -34,12 +34,12 @@ export default function AnalysisPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Analysis</h1>
+      <h1 className="text-2xl font-bold">数据分析</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader>
-            <CardDescription>Total submissions</CardDescription>
+            <CardDescription>提交总数</CardDescription>
             <CardTitle className="text-3xl">
               {summary.isLoading ? "…" : summary.data?.total ?? 0}
             </CardTitle>
@@ -47,7 +47,7 @@ export default function AnalysisPage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardDescription>AC rate</CardDescription>
+            <CardDescription>AC 率</CardDescription>
             <CardTitle className="text-3xl">
               {summary.isLoading
                 ? "…"
@@ -59,7 +59,7 @@ export default function AnalysisPage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardDescription>Unique verdicts</CardDescription>
+            <CardDescription>判题结果种类</CardDescription>
             <CardTitle className="text-3xl">
               {summary.data ? Object.keys(summary.data.by_verdict).length : 0}
             </CardTitle>
@@ -70,12 +70,12 @@ export default function AnalysisPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card>
           <CardHeader>
-            <CardTitle>Verdict distribution</CardTitle>
-            <CardDescription>Counts grouped by verdict</CardDescription>
+            <CardTitle>判题结果分布</CardTitle>
+            <CardDescription>按结果类型分组统计</CardDescription>
           </CardHeader>
           <CardContent>
             {verdictData.length === 0 ? (
-              <p className="text-muted-foreground">No data yet.</p>
+              <p className="text-muted-foreground">暂无数据。</p>
             ) : (
               <ResponsiveContainer width="100%" height={280}>
                 <BarChart data={verdictData}>
@@ -93,8 +93,8 @@ export default function AnalysisPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Submission timeline</CardTitle>
-            <CardDescription>Per-day submission counts</CardDescription>
+            <CardTitle>提交时间线</CardTitle>
+            <CardDescription>每日提交数量</CardDescription>
           </CardHeader>
           <CardContent>
             {timeline.isLoading ? (
@@ -112,7 +112,7 @@ export default function AnalysisPage() {
                 </LineChart>
               </ResponsiveContainer>
             ) : (
-              <p className="text-muted-foreground">No data yet.</p>
+              <p className="text-muted-foreground">暂无数据。</p>
             )}
           </CardContent>
         </Card>
@@ -120,12 +120,12 @@ export default function AnalysisPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Difficulty distribution</CardTitle>
-          <CardDescription>Submissions grouped by problem difficulty (SQL JOIN)</CardDescription>
+          <CardTitle>难度分布</CardTitle>
+          <CardDescription>按题目难度分组统计</CardDescription>
         </CardHeader>
         <CardContent>
           {diff.isLoading ? (
-            <p>Loading…</p>
+            <p>加载中…</p>
           ) : diff.data && diff.data.length > 0 ? (
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={diff.data}>

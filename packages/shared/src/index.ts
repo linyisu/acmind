@@ -4,3 +4,4 @@ export * from "./types/submission";
 export * from "./types/knowledge";
 export * from "./types/tag";
 export * from "./types/analysis";
+export * from "./types/template";

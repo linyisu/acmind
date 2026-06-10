@@ -1,112 +1,60 @@
 # ACMind
 
-Personal algorithm training knowledge base — Web fullstack project.
+个人算法训练知识库 — 记录题目、提交、模板、错误模式，用 AI 自动分析和整理。
 
-Algorithm training leaves a lot of breadcrumbs: problems, submissions, verdict
-histories, templates, snippets, and notes. ACMind is a single place to keep
-them, with enough structured querying to ask "where am I struggling?" without
-leaving the app.
+## 功能
 
-## Tech Stack
+- **题目管理** — 记录来自各 OJ 的题目，支持标签分类和难度标注
+- **提交记录** — 手动记录或通过 VJudge 导入提交历史
+- **模板库** — 结构化代码模板，支持分类/语言/复杂度/关联题目，AI 自动提取和匹配
+- **知识库** — 笔记、技巧、代码片段，Markdown + LaTeX 公式
+- **AI 全量分析** — 对一道题的全部提交进行深度分析，自动识别算法类型、提取模板、诊断错误、梳理知识点
+- **任务中心** — 实时查看 AI 分析进度，支持取消
+- **数据分析** — 提交统计、判题结果分布、难度分布图表
 
-**Backend:** Rust · Axum 0.7 · SeaORM 1 · PostgreSQL 16 · Tokio
-**Frontend:** React 19 · Vite 6 · TypeScript 5 · Tailwind 4 · shadcn/ui · TanStack Query 5 · Zustand 5
-**Infrastructure:** pnpm workspace · turbo · Docker Compose · GitHub Actions
-
-## Quick Start (Docker)
+## 快速开始
 
 ```bash
-cp .env.example .env  # set JWT_SECRET
+cp .env.example .env   # 编辑 JWT_SECRET 和 LLM_API_KEY
 docker compose up -d --build
 ```
 
-Open http://localhost:5173 — the React app. API at :8080, Postgres at :5432.
+- 前端：http://localhost:5173
+- API：http://localhost:8080
 
-## Local Development (without Docker)
+### 本地开发
 
 ```bash
-# Postgres (in another shell)
 docker compose up -d postgres
 
-# Backend
+# 后端
 cd apps/api
 DATABASE_URL=postgres://acmind:acmind@localhost:5432/acmind \
-  JWT_SECRET=devsecret cargo run
+  JWT_SECRET=devsecret LLM_PROVIDER=noop cargo run
 
-# Frontend
-cd apps/web
-pnpm install
-pnpm dev  # http://localhost:5173
+# 前端
+cd apps/web && pnpm install && pnpm dev
 ```
 
-The first API start runs SeaORM migrations automatically.
+### 环境变量
 
-## Project Structure
+| 变量 | 说明 | 默认值 |
+|------|------|--------|
+| `DATABASE_URL` | Postgres 连接串 | — |
+| `JWT_SECRET` | JWT 签名密钥 | — |
+| `LLM_PROVIDER` | AI 提供商（`openai` / `noop`） | noop |
+| `LLM_API_KEY` | AI API Key | — |
+| `LLM_BASE_URL` | AI API 地址 | `https://api.openai.com/v1` |
+| `LLM_MODEL` | 模型名 | `gpt-4o-mini` |
+| `ALLOW_REGISTER` | 是否开放注册 | true |
 
-```
-acmind/
-├── apps/
-│   ├── api/                Rust Axum backend (auth, problem, submission,
-│   │                       knowledge, tag, analysis modules)
-│   └── web/                React + Vite SPA
-├── packages/
-│   └── shared/             Shared TypeScript types
-├── docs/superpowers/       Design spec and implementation plan
-├── docker-compose.yml
-└── .github/workflows/ci.yml
-```
+完整配置见 `.env.example`。
 
-## API
+## 技术栈
 
-All endpoints under `/api/v1` (except `/auth/register` and `/auth/login`)
-require `Authorization: Bearer <jwt>`.
-
-| Method | Path | Description |
-|--------|------|-------------|
-| GET    | `/health` | Liveness probe |
-| POST   | `/api/v1/auth/register` | Register a user |
-| POST   | `/api/v1/auth/login` | Login, returns JWT |
-| GET    | `/api/v1/auth/me` | Current user |
-| GET    | `/api/v1/problems` | List problems (filter by `tag_id`) |
-| POST   | `/api/v1/problems` | Create problem |
-| GET    | `/api/v1/problems/:id` | Get problem |
-| PATCH  | `/api/v1/problems/:id` | Update problem |
-| DELETE | `/api/v1/problems/:id` | Delete problem |
-| GET    | `/api/v1/submissions` | List submissions |
-| POST   | `/api/v1/submissions` | Log a submission |
-| GET    | `/api/v1/submissions/:id` | Get submission |
-| GET    | `/api/v1/knowledge` | List knowledge entries |
-| POST   | `/api/v1/knowledge` | Create knowledge entry |
-| GET    | `/api/v1/knowledge/:id` | Get knowledge entry |
-| PATCH  | `/api/v1/knowledge/:id` | Update knowledge entry |
-| DELETE | `/api/v1/knowledge/:id` | Delete knowledge entry |
-| GET    | `/api/v1/tags` | List tags |
-| POST   | `/api/v1/tags` | Create tag |
-| DELETE | `/api/v1/tags/:id` | Delete tag |
-| GET    | `/api/v1/analysis/submissions/summary` | Total / AC rate / verdict histogram |
-| GET    | `/api/v1/analysis/submissions/timeline` | Per-day submission counts |
-| GET    | `/api/v1/analysis/problems/difficulty-distribution` | Difficulty histogram with JOIN |
-
-## Analysis
-
-The `analysis` module runs SQL aggregations directly on PostgreSQL via SeaORM:
-
-- `summary` — total submissions, AC rate, verdict counts
-- `timeline` — daily submission and AC counts (filterable by date range)
-- `difficulty_distribution` — joins `submission` and `problem` to bucket
-  attempts by problem difficulty
-
-## Testing
-
-```bash
-# Backend
-cd apps/api
-DATABASE_URL=postgres://postgres:postgres@localhost:5432/postgres cargo test
-
-# Frontend
-cd apps/web
-pnpm exec tsc -b
-```
+**后端：** Rust · Axum · SeaORM · PostgreSQL
+**前端：** React · TypeScript · Vite · Tailwind CSS · shadcn/ui
+**AI：** OpenAI 兼容 API，可配置任意 provider
 
 ## License
 
