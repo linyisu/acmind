@@ -1,4 +1,0 @@
-{
-  "signature": "src/App.tsx::Unresolved from this turn — src/App.tsx:\n🔴 STOP — 4 issue(s) must be fixed:\n  L4: 'ImportToast' is declared but its value is never read.\n    💡 Fix: LSP quick fixes: Remove import from './components/ImportToast'; Remove import from './hooks/useVJudgeImportListener'\n  L5: 'useVJudgeImportListener' is declared but its value is never read.\n    💡 Fix: LSP quick fixes: Remove import from './components/ImportToast'; Remove import from './hooks/useVJudgeImportListener'\n  L4: @typescript-eslint/no-unused-vars: 'ImportToast' is defined but never used.\n  L5: @typescript-eslint/no-unused-vars: 'useVJudgeImportListener' is defined but never used.",
-  "sessionId": "lens-mpmwju2k-daa8c105"
-}
