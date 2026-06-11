@@ -17,15 +17,28 @@ impl MigrationTrait for Migration {
                     .col(string(Task::Status).not_null().default("pending"))
                     .col(string(Task::TargetType).not_null())
                     .col(ColumnDef::new(Task::TargetId).big_integer().not_null())
-                    .col(ColumnDef::new(Task::Progress).json_binary().not_null().default(Expr::cust("'[]'::jsonb")))
+                    .col(
+                        ColumnDef::new(Task::Progress)
+                            .json_binary()
+                            .not_null()
+                            .default(Expr::cust("'[]'::jsonb")),
+                    )
                     .col(ColumnDef::new(Task::Result).json_binary().null())
                     .col(ColumnDef::new(Task::Error).text().null())
                     .col(
                         timestamp_with_time_zone(Task::CreatedAt)
                             .default(Expr::current_timestamp()),
                     )
-                    .col(ColumnDef::new(Task::StartedAt).timestamp_with_time_zone().null())
-                    .col(ColumnDef::new(Task::CompletedAt).timestamp_with_time_zone().null())
+                    .col(
+                        ColumnDef::new(Task::StartedAt)
+                            .timestamp_with_time_zone()
+                            .null(),
+                    )
+                    .col(
+                        ColumnDef::new(Task::CompletedAt)
+                            .timestamp_with_time_zone()
+                            .null(),
+                    )
                     .foreign_key(
                         ForeignKey::create()
                             .name("fk_task_user")

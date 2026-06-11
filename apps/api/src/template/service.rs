@@ -1,10 +1,7 @@
 use crate::{
     error::{AppError, AppResult},
     state::AppState,
-    template::{
-        model::*,
-        repo,
-    },
+    template::{model::*, repo},
 };
 
 pub struct TemplateService<'a> {
@@ -40,11 +37,7 @@ impl<'a> TemplateService<'a> {
         Ok(to_resp(row, tag_ids, problem_ids))
     }
 
-    pub async fn create(
-        &self,
-        user_id: i64,
-        req: CreateTemplateReq,
-    ) -> AppResult<TemplateResp> {
+    pub async fn create(&self, user_id: i64, req: CreateTemplateReq) -> AppResult<TemplateResp> {
         let row = repo::insert(
             &self.state.db,
             user_id,
@@ -146,7 +139,11 @@ impl<'a> TemplateService<'a> {
     }
 }
 
-fn to_resp(row: crate::entity::template::Model, tag_ids: Vec<i64>, problem_ids: Vec<i64>) -> TemplateResp {
+fn to_resp(
+    row: crate::entity::template::Model,
+    tag_ids: Vec<i64>,
+    problem_ids: Vec<i64>,
+) -> TemplateResp {
     TemplateResp {
         id: row.id,
         user_id: row.user_id,

@@ -1,13 +1,20 @@
-use acmind_api::{ai::provider::{NoopLlmProvider, OpenAiProvider}, build_router, config::Config, db, state::AppState};
+use acmind_api::{
+    ai::provider::{NoopLlmProvider, OpenAiProvider},
+    build_router,
+    config::Config,
+    db,
+    state::AppState,
+};
 use std::sync::Arc;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     tracing_subscriber::registry()
-        .with(EnvFilter::try_from_default_env().unwrap_or_else(|_| {
-            EnvFilter::new("info,acmind_api=debug")
-        }))
+        .with(
+            EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| EnvFilter::new("info,acmind_api=debug")),
+        )
         .with(tracing_subscriber::fmt::layer().with_target(true))
         .init();
 
@@ -18,11 +25,22 @@ async fn main() -> anyhow::Result<()> {
     let llm: Arc<dyn acmind_api::ai::provider::LlmProvider> = match cfg.llm_provider.as_str() {
         "openai" => {
             if cfg.llm_api_key.is_empty() {
-                tracing::warn!("LLM_PROVIDER=openai but LLM_API_KEY is empty, falling back to noop");
+                tracing::warn!(
+                    "LLM_PROVIDER=openai but LLM_API_KEY is empty, falling back to noop"
+                );
                 Arc::new(NoopLlmProvider)
             } else {
-                tracing::info!("LLM: {} @ {} ({})", cfg.llm_provider, cfg.llm_base_url, cfg.llm_model);
-                Arc::new(OpenAiProvider::new(&cfg.llm_base_url, &cfg.llm_api_key, &cfg.llm_model))
+                tracing::info!(
+                    "LLM: {} @ {} ({})",
+                    cfg.llm_provider,
+                    cfg.llm_base_url,
+                    cfg.llm_model
+                );
+                Arc::new(OpenAiProvider::new(
+                    &cfg.llm_base_url,
+                    &cfg.llm_api_key,
+                    &cfg.llm_model,
+                ))
             }
         }
         "noop" | "" => Arc::new(NoopLlmProvider),
@@ -46,7 +64,10 @@ async fn main() -> anyhow::Result<()> {
     let addr = format!("0.0.0.0:{}", cfg.api_port);
     let listener = tokio::net::TcpListener::bind(&addr).await?;
     tracing::info!(%addr, "acmind-api listening");
-    axum::serve(listener, app.into_make_service_with_connect_info::<std::net::SocketAddr>())
-        .await?;
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<std::net::SocketAddr>(),
+    )
+    .await?;
     Ok(())
 }

@@ -10,7 +10,12 @@ impl MigrationTrait for Migration {
             .alter_table(
                 Table::alter()
                     .table(Template::Table)
-                    .add_column(ColumnDef::new(Template::Summary).string_len(500).not_null().default(""))
+                    .add_column(
+                        ColumnDef::new(Template::Summary)
+                            .string_len(500)
+                            .not_null()
+                            .default(""),
+                    )
                     .to_owned(),
             )
             .await

@@ -34,7 +34,10 @@ pub async fn list_by_user(db: &DatabaseConnection, user_id: i64) -> AppResult<Ve
 pub async fn delete(db: &DatabaseConnection, user_id: i64, id: i64) -> AppResult<bool> {
     let stmt = Statement::from_string(
         DbBackend::Postgres,
-        format!("DELETE FROM tag WHERE id = {} AND user_id = {}", id, user_id),
+        format!(
+            "DELETE FROM tag WHERE id = {} AND user_id = {}",
+            id, user_id
+        ),
     );
     let res = db.execute(stmt).await?;
     Ok(res.rows_affected() > 0)

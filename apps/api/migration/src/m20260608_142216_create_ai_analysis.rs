@@ -14,7 +14,11 @@ impl MigrationTrait for Migration {
                     .col(pk_auto(AiAnalysis::Id).big_integer())
                     .col(ColumnDef::new(AiAnalysis::UserId).big_integer().not_null())
                     .col(string(AiAnalysis::TargetType).not_null())
-                    .col(ColumnDef::new(AiAnalysis::TargetId).big_integer().not_null())
+                    .col(
+                        ColumnDef::new(AiAnalysis::TargetId)
+                            .big_integer()
+                            .not_null(),
+                    )
                     .col(ColumnDef::new(AiAnalysis::Result).json_binary().not_null())
                     .col(
                         timestamp_with_time_zone(AiAnalysis::CreatedAt)

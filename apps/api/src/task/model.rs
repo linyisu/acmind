@@ -6,7 +6,7 @@ use serde_json::Value;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProgressStep {
     pub step: String,
-    pub status: String,   // pending / running / completed / failed
+    pub status: String, // pending / running / completed / failed
     pub message: String,
 }
 
@@ -14,17 +14,17 @@ pub struct ProgressStep {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AgentStep {
     pub label: String,
-    pub status: String,   // pending / running / completed / failed
+    pub status: String, // pending / running / completed / failed
     pub detail: String,
 }
 
 /// Agent-level progress tracking.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AgentProgress {
-    pub id: String,       // classifier, template, error, knowledge, saver
-    pub name: String,     // 题目分析官, 模板提取官, etc.
-    pub icon: String,     // emoji
-    pub status: String,   // pending / running / completed / failed
+    pub id: String,     // classifier, template, error, knowledge, saver
+    pub name: String,   // 题目分析官, 模板提取官, etc.
+    pub icon: String,   // emoji
+    pub status: String, // pending / running / completed / failed
     pub message: String,
     pub steps: Vec<AgentStep>,
 }
@@ -54,20 +54,23 @@ pub struct TaskResp {
 impl TaskResp {
     pub fn from_model(m: crate::entity::task::Model) -> Self {
         // Try new format first, fall back to legacy
-        let progress: TaskProgress = serde_json::from_value(m.progress.clone())
-            .unwrap_or_else(|_| {
+        let progress: TaskProgress =
+            serde_json::from_value(m.progress.clone()).unwrap_or_else(|_| {
                 // Legacy format: convert flat steps to agents
-                let legacy: Vec<ProgressStep> = serde_json::from_value(m.progress)
-                    .unwrap_or_default();
+                let legacy: Vec<ProgressStep> =
+                    serde_json::from_value(m.progress).unwrap_or_default();
                 TaskProgress {
-                    agents: legacy.into_iter().map(|s| AgentProgress {
-                        id: s.step,
-                        name: s.message.clone(),
-                        icon: String::new(),
-                        status: s.status,
-                        message: s.message,
-                        steps: vec![],
-                    }).collect(),
+                    agents: legacy
+                        .into_iter()
+                        .map(|s| AgentProgress {
+                            id: s.step,
+                            name: s.message.clone(),
+                            icon: String::new(),
+                            status: s.status,
+                            message: s.message,
+                            steps: vec![],
+                        })
+                        .collect(),
                 }
             });
         Self {

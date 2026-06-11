@@ -87,7 +87,10 @@ async fn tags_for_knowledge(
 ) -> AppResult<Vec<i64>> {
     let tags = tag::Entity::find()
         .join(JoinType::InnerJoin, tag::Relation::KnowledgeTag.def())
-        .join(JoinType::InnerJoin, knowledge_tag::Relation::Knowledge.def())
+        .join(
+            JoinType::InnerJoin,
+            knowledge_tag::Relation::Knowledge.def(),
+        )
         .filter(knowledge_tag::Column::KnowledgeId.eq(knowledge_id))
         .all(db)
         .await?;

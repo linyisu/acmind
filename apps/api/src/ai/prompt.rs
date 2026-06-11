@@ -1,6 +1,6 @@
 use crate::ai::context::{
-    build_diff_chain, build_error_code_blocks, classification_brief,
-    AnalysisContext, ClassificationBrief, SubmissionSummary, TemplateBrief,
+    build_diff_chain, build_error_code_blocks, classification_brief, AnalysisContext,
+    ClassificationBrief, SubmissionSummary, TemplateBrief,
 };
 
 // ─── System prompts ─────────────────────────────────────────────────
@@ -91,7 +91,8 @@ pub fn build_classifier_prompt(ctx: &AnalysisContext) -> String {
         "## 题目信息\n- 标题：{}\n- 来源：{}\n- 难度：{}\n",
         ctx.problem_title,
         ctx.problem_source,
-        ctx.problem_difficulty.map_or("未知".to_string(), |d| d.to_string()),
+        ctx.problem_difficulty
+            .map_or("未知".to_string(), |d| d.to_string()),
     ));
 
     if let Some(stmt) = &ctx.problem_statement {
@@ -105,7 +106,11 @@ pub fn build_classifier_prompt(ctx: &AnalysisContext) -> String {
         "\n## 提交统计\n- 总提交数：{}\n- AC 数：{}\n- AC 率：{:.1}%\n",
         total,
         ac_count,
-        if total > 0 { ac_count as f64 / total as f64 * 100.0 } else { 0.0 },
+        if total > 0 {
+            ac_count as f64 / total as f64 * 100.0
+        } else {
+            0.0
+        },
     ));
 
     prompt.push_str("\n## 提交记录（第一条为完整代码，后续为与前一条的 diff）\n\n");
@@ -159,8 +164,12 @@ pub fn build_template_prompt(
 }
 
 /// Build the error analysis prompt.
-pub fn build_error_prompt(brief: &ClassificationBrief, submissions: &[SubmissionSummary]) -> String {
-    let non_ac: Vec<&SubmissionSummary> = submissions.iter().filter(|s| s.verdict != "AC").collect();
+pub fn build_error_prompt(
+    brief: &ClassificationBrief,
+    submissions: &[SubmissionSummary],
+) -> String {
+    let non_ac: Vec<&SubmissionSummary> =
+        submissions.iter().filter(|s| s.verdict != "AC").collect();
     if non_ac.is_empty() {
         return "没有非 AC 提交，无需分析错误模式。返回 {\"errors\": []}".to_string();
     }

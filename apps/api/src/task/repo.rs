@@ -1,7 +1,4 @@
-use crate::{
-    entity::task,
-    error::AppResult,
-};
+use crate::{entity::task, error::AppResult};
 use chrono::Utc;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, QueryOrder,
@@ -57,10 +54,7 @@ pub async fn find_by_id(
 }
 
 /// Get a single task by ID (no user filter, for internal use by background tasks).
-pub async fn find_by_id_system(
-    db: &DatabaseConnection,
-    id: i64,
-) -> AppResult<Option<task::Model>> {
+pub async fn find_by_id_system(db: &DatabaseConnection, id: i64) -> AppResult<Option<task::Model>> {
     Ok(task::Entity::find_by_id(id).one(db).await?)
 }
 

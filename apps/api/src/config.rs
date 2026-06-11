@@ -21,8 +21,8 @@ impl Config {
         let _ = dotenvy::dotenv();
         let database_url = std::env::var("DATABASE_URL")
             .map_err(|_| anyhow::anyhow!("DATABASE_URL is required"))?;
-        let jwt_secret = std::env::var("JWT_SECRET")
-            .map_err(|_| anyhow::anyhow!("JWT_SECRET is required"))?;
+        let jwt_secret =
+            std::env::var("JWT_SECRET").map_err(|_| anyhow::anyhow!("JWT_SECRET is required"))?;
         let api_port = std::env::var("API_PORT")
             .ok()
             .and_then(|s| s.parse().ok())
@@ -43,13 +43,11 @@ impl Config {
             .ok()
             .and_then(|s| s.parse().ok())
             .unwrap_or(20u32);
-        let llm_provider = std::env::var("LLM_PROVIDER")
-            .unwrap_or_else(|_| "noop".to_string());
+        let llm_provider = std::env::var("LLM_PROVIDER").unwrap_or_else(|_| "noop".to_string());
         let llm_api_key = std::env::var("LLM_API_KEY").unwrap_or_default();
         let llm_base_url = std::env::var("LLM_BASE_URL")
             .unwrap_or_else(|_| "https://api.openai.com/v1".to_string());
-        let llm_model = std::env::var("LLM_MODEL")
-            .unwrap_or_else(|_| "gpt-4o-mini".to_string());
+        let llm_model = std::env::var("LLM_MODEL").unwrap_or_else(|_| "gpt-4o-mini".to_string());
         Ok(Config {
             database_url,
             api_port,

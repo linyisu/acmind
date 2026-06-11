@@ -22,10 +22,7 @@ use tower_http::cors::{Any, CorsLayer};
 use tower_http::trace::TraceLayer;
 
 pub fn build_router(state: state::AppState) -> Router {
-    let auth_layer = middleware::from_fn_with_state(
-        state.clone(),
-        auth::middleware::require_auth,
-    );
+    let auth_layer = middleware::from_fn_with_state(state.clone(), auth::middleware::require_auth);
 
     // General rate limit for all routes
     let general_config = Arc::new(
@@ -48,10 +45,7 @@ pub fn build_router(state: state::AppState) -> Router {
     );
 
     let api_v1 = Router::new()
-        .merge(
-            auth::route::public_router()
-                .layer(GovernorLayer::new(auth_config)),
-        )
+        .merge(auth::route::public_router().layer(GovernorLayer::new(auth_config)))
         .merge(auth::route::protected_router().route_layer(auth_layer.clone()))
         .merge(problem::route::protected_router().route_layer(auth_layer.clone()))
         .merge(submission::route::protected_router().route_layer(auth_layer.clone()))

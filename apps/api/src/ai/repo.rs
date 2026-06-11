@@ -35,18 +35,14 @@ pub async fn insert(
             now.to_rfc3339(),
         ),
     );
-    let row = db
-        .query_one(stmt)
-        .await?
-        .ok_or_else(|| crate::error::AppError::Internal("ai_analysis insert returned no row".into()))?;
+    let row = db.query_one(stmt).await?.ok_or_else(|| {
+        crate::error::AppError::Internal("ai_analysis insert returned no row".into())
+    })?;
     row.try_get_by::<i64, _>("id")
         .map_err(|e| crate::error::AppError::Internal(format!("ai_analysis id parse: {e}")))
 }
 
-pub async fn list_by_user(
-    db: &DatabaseConnection,
-    user_id: i64,
-) -> AppResult<Vec<AiAnalysisRow>> {
+pub async fn list_by_user(db: &DatabaseConnection, user_id: i64) -> AppResult<Vec<AiAnalysisRow>> {
     let stmt = Statement::from_string(
         DbBackend::Postgres,
         format!(

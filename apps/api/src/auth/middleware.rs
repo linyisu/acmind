@@ -1,4 +1,8 @@
-use crate::{auth::jwt, error::{AppError, AppResult}, state::AppState};
+use crate::{
+    auth::jwt,
+    error::{AppError, AppResult},
+    state::AppState,
+};
 use axum::{
     extract::{Request, State},
     http::header::AUTHORIZATION,
@@ -35,10 +39,7 @@ mod tests {
     fn build_test_router(state: AppState) -> Router {
         Router::new()
             .route("/protected", get(dummy_handler))
-            .route_layer(middleware::from_fn_with_state(
-                state.clone(),
-                require_auth,
-            ))
+            .route_layer(middleware::from_fn_with_state(state.clone(), require_auth))
             .with_state(state)
     }
 

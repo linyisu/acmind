@@ -42,7 +42,9 @@ async fn timeline(
     Query(q): Query<TimelineQuery>,
 ) -> AppResult<Json<Vec<TimelinePoint>>> {
     let svc = AnalysisService::new(&state);
-    Ok(Json(svc.submissions_timeline(ctx.user_id, q.from, q.to).await?))
+    Ok(Json(
+        svc.submissions_timeline(ctx.user_id, q.from, q.to).await?,
+    ))
 }
 
 async fn difficulty_dist(

@@ -110,12 +110,24 @@ pub async fn update(
     };
 
     let mut am: problem::ActiveModel = existing.into();
-    if let Some(s) = source { am.source = Set(s.to_string()); }
-    if let Some(e) = external_id { am.external_id = Set(Some(e.to_string())); }
-    if let Some(t) = title { am.title = Set(t.to_string()); }
-    if let Some(u) = url { am.url = Set(Some(u.to_string())); }
-    if let Some(d) = difficulty { am.difficulty = Set(Some(d)); }
-    if let Some(s) = statement { am.statement = Set(Some(s.to_string())); }
+    if let Some(s) = source {
+        am.source = Set(s.to_string());
+    }
+    if let Some(e) = external_id {
+        am.external_id = Set(Some(e.to_string()));
+    }
+    if let Some(t) = title {
+        am.title = Set(t.to_string());
+    }
+    if let Some(u) = url {
+        am.url = Set(Some(u.to_string()));
+    }
+    if let Some(d) = difficulty {
+        am.difficulty = Set(Some(d));
+    }
+    if let Some(s) = statement {
+        am.statement = Set(Some(s.to_string()));
+    }
     am.updated_at = Set(Utc::now().into());
 
     Ok(Some(am.update(db).await?))

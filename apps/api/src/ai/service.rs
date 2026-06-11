@@ -1,16 +1,17 @@
 use crate::{
     ai::{
-        model::{AnalysisResult, AnalysisResp},
+        model::{AnalysisResp, AnalysisResult},
         repo,
     },
     error::{AppError, AppResult},
+    problem::repo as prob_repo,
     state::AppState,
     submission::repo as sub_repo,
-    problem::repo as prob_repo,
 };
 use serde_json::Value;
 
-const SYSTEM_PROMPT: &str = "你是一个竞品编程分析助手。分析提交代码，返回 JSON 格式结果。只返回 JSON，不要其他内容。";
+const SYSTEM_PROMPT: &str =
+    "你是一个竞品编程分析助手。分析提交代码，返回 JSON 格式结果。只返回 JSON，不要其他内容。";
 
 pub struct AiService<'a> {
     pub state: &'a AppState,
@@ -28,7 +29,9 @@ impl<'a> AiService<'a> {
         submission_id: i64,
     ) -> AppResult<AnalysisResp> {
         // Check if already analyzed
-        if let Some(existing) = repo::find_by_target(&self.state.db, user_id, "submission", submission_id).await? {
+        if let Some(existing) =
+            repo::find_by_target(&self.state.db, user_id, "submission", submission_id).await?
+        {
             return to_resp(existing);
         }
 
@@ -57,13 +60,23 @@ impl<'a> AiService<'a> {
         let response = self.state.llm.chat(SYSTEM_PROMPT, &user_prompt).await?;
 
         // Parse JSON response
-        let result: AnalysisResult = serde_json::from_str(response.trim())
-            .map_err(|e| AppError::Internal(format!("Failed to parse LLM response as JSON: {e}\nResponse: {response}")))?;
+        let result: AnalysisResult = serde_json::from_str(response.trim()).map_err(|e| {
+            AppError::Internal(format!(
+                "Failed to parse LLM response as JSON: {e}\nResponse: {response}"
+            ))
+        })?;
 
         // Save to DB
         let result_json: Value = serde_json::to_value(&result)
             .map_err(|e| AppError::Internal(format!("serialize analysis result: {e}")))?;
-        let id = repo::insert(&self.state.db, user_id, "submission", submission_id, &result_json).await?;
+        let id = repo::insert(
+            &self.state.db,
+            user_id,
+            "submission",
+            submission_id,
+            &result_json,
+        )
+        .await?;
 
         Ok(AnalysisResp {
             id,
