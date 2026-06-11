@@ -15,11 +15,7 @@ impl<'a> ProblemService<'a> {
         Self { state }
     }
 
-    pub async fn list(
-        &self,
-        user_id: i64,
-        tag_id: Option<i64>,
-    ) -> AppResult<Vec<ProblemResp>> {
+    pub async fn list(&self, user_id: i64, tag_id: Option<i64>) -> AppResult<Vec<ProblemResp>> {
         let rows = repo::list_by_user(&self.state.db, user_id, tag_id).await?;
         Ok(rows
             .into_iter()

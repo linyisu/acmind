@@ -12,7 +12,10 @@ pub struct UserRow {
     pub updated_at: DateTime<Utc>,
 }
 
-pub async fn find_by_username(db: &DatabaseConnection, username: &str) -> AppResult<Option<UserRow>> {
+pub async fn find_by_username(
+    db: &DatabaseConnection,
+    username: &str,
+) -> AppResult<Option<UserRow>> {
     let stmt = Statement::from_string(
         DbBackend::Postgres,
         format!(
@@ -62,7 +65,8 @@ pub async fn insert(
         .query_one(stmt)
         .await?
         .ok_or_else(|| crate::error::AppError::Internal("user insert returned no row".into()))?;
-    row_to_user(result).ok_or_else(|| crate::error::AppError::Internal("user row parse failed".into()))
+    row_to_user(result)
+        .ok_or_else(|| crate::error::AppError::Internal("user row parse failed".into()))
 }
 
 fn row_to_user(row: sea_orm::QueryResult) -> Option<UserRow> {
@@ -71,9 +75,11 @@ fn row_to_user(row: sea_orm::QueryResult) -> Option<UserRow> {
         username: row.try_get_by::<String, _>("username").ok()?,
         email: row.try_get_by::<String, _>("email").ok()?,
         password_hash: row.try_get_by::<String, _>("password_hash").ok()?,
-        created_at: row.try_get_by::<chrono::DateTime<chrono::Utc>, _>("created_at").ok()?,
-        updated_at: row.try_get_by::<chrono::DateTime<chrono::Utc>, _>("updated_at").ok()?,
+        created_at: row
+            .try_get_by::<chrono::DateTime<chrono::Utc>, _>("created_at")
+            .ok()?,
+        updated_at: row
+            .try_get_by::<chrono::DateTime<chrono::Utc>, _>("updated_at")
+            .ok()?,
     })
 }
-
-

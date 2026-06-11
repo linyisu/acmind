@@ -1,3 +1,4 @@
+use crate::ai::provider::LlmProvider;
 use crate::{
     ai::{
         context::{ClassificationBrief, SubmissionSummary, TemplateBrief},
@@ -7,7 +8,6 @@ use crate::{
     },
     error::AppResult,
 };
-use crate::ai::provider::LlmProvider;
 use serde::Deserialize;
 
 pub struct TemplateAgent;

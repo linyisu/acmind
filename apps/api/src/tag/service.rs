@@ -37,14 +37,13 @@ impl<'a> TagService<'a> {
         Ok(())
     }
 
-    pub async fn validate_owned(
-        &self,
-        user_id: i64,
-        tag_ids: &[i64],
-    ) -> AppResult<()> {
+    pub async fn validate_owned(&self, user_id: i64, tag_ids: &[i64]) -> AppResult<()> {
         for id in tag_ids {
             if !repo::exists_and_owned(&self.state.db, user_id, *id).await? {
-                return Err(AppError::BadRequest(format!("tag {} not owned by user", id)));
+                return Err(AppError::BadRequest(format!(
+                    "tag {} not owned by user",
+                    id
+                )));
             }
         }
         Ok(())
@@ -52,5 +51,9 @@ impl<'a> TagService<'a> {
 }
 
 fn to_resp(row: TagRow) -> TagResp {
-    TagResp { id: row.id, user_id: row.user_id, name: row.name }
+    TagResp {
+        id: row.id,
+        user_id: row.user_id,
+        name: row.name,
+    }
 }

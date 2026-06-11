@@ -68,8 +68,14 @@ impl LlmProvider for OpenAiProvider {
         let req = ChatRequest {
             model: self.model.clone(),
             messages: vec![
-                ChatMessage { role: "system".into(), content: system.into() },
-                ChatMessage { role: "user".into(), content: user.into() },
+                ChatMessage {
+                    role: "system".into(),
+                    content: system.into(),
+                },
+                ChatMessage {
+                    role: "user".into(),
+                    content: user.into(),
+                },
             ],
             temperature: 0.3,
         };
@@ -86,10 +92,9 @@ impl LlmProvider for OpenAiProvider {
 
             match resp {
                 Ok(r) if r.status().is_success() => {
-                    let chat: ChatResponse = r
-                        .json()
-                        .await
-                        .map_err(|e| AppError::Internal(format!("LLM response parse failed: {e}")))?;
+                    let chat: ChatResponse = r.json().await.map_err(|e| {
+                        AppError::Internal(format!("LLM response parse failed: {e}"))
+                    })?;
                     return chat
                         .choices
                         .first()
@@ -104,7 +109,10 @@ impl LlmProvider for OpenAiProvider {
                         let delay = Duration::from_millis(1000 * 2u64.pow(attempt));
                         tracing::warn!(
                             "LLM API error {} (attempt {}/{}), retrying in {:?}",
-                            status, attempt + 1, MAX_RETRIES + 1, delay
+                            status,
+                            attempt + 1,
+                            MAX_RETRIES + 1,
+                            delay
                         );
                         tokio::time::sleep(delay).await;
                         continue;
@@ -118,7 +126,10 @@ impl LlmProvider for OpenAiProvider {
                         let delay = Duration::from_millis(1000 * 2u64.pow(attempt));
                         tracing::warn!(
                             "LLM request failed (attempt {}/{}): {}, retrying in {:?}",
-                            attempt + 1, MAX_RETRIES + 1, e, delay
+                            attempt + 1,
+                            MAX_RETRIES + 1,
+                            e,
+                            delay
                         );
                         tokio::time::sleep(delay).await;
                         continue;
@@ -128,7 +139,9 @@ impl LlmProvider for OpenAiProvider {
             }
         }
 
-        Err(AppError::Internal("LLM request failed after all retries".into()))
+        Err(AppError::Internal(
+            "LLM request failed after all retries".into(),
+        ))
     }
 }
 

@@ -95,8 +95,7 @@ pub async fn list(
     user_id: i64,
     query: &ListTemplatesQuery,
 ) -> AppResult<Vec<template::Model>> {
-    let mut sel = template::Entity::find()
-        .filter(template::Column::UserId.eq(user_id));
+    let mut sel = template::Entity::find().filter(template::Column::UserId.eq(user_id));
 
     if let Some(ref cat) = query.category {
         sel = sel.filter(template::Column::Category.eq(cat.as_db_str()));
@@ -122,7 +121,10 @@ pub async fn list(
     // Filter by problem via join
     if let Some(problem_id) = query.problem_id {
         sel = sel
-            .join(JoinType::InnerJoin, template::Relation::TemplateProblem.def())
+            .join(
+                JoinType::InnerJoin,
+                template::Relation::TemplateProblem.def(),
+            )
             .filter(template_problem::Column::ProblemId.eq(problem_id));
     }
 
@@ -137,9 +139,7 @@ pub async fn list(
 
 /// Get tag IDs for a template.
 pub async fn tag_ids(db: &DatabaseConnection, template_id: i64) -> AppResult<Vec<i64>> {
-    let tpl = template::Entity::find_by_id(template_id)
-        .one(db)
-        .await?;
+    let tpl = template::Entity::find_by_id(template_id).one(db).await?;
     let Some(tpl) = tpl else { return Ok(vec![]) };
     let tags = tpl.find_related(tag::Entity).all(db).await?;
     Ok(tags.into_iter().map(|t| t.id).collect())

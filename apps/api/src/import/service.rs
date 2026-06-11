@@ -1,9 +1,4 @@
-use crate::{
-    error::AppResult,
-    import::model::*,
-    state::AppState,
-    tag::repo as tag_repo,
-};
+use crate::{error::AppResult, import::model::*, state::AppState, tag::repo as tag_repo};
 use chrono::Utc;
 use sea_orm::{ConnectionTrait, DatabaseConnection, DbBackend, Statement};
 
@@ -27,9 +22,15 @@ impl<'a> ImportService<'a> {
 
         // Find or create problem
         let (problem_id, is_new) = find_or_create_problem(
-            db, user_id, &source, &req.source_problem_id,
-            &req.title, req.url.as_deref(), req.statement.as_deref(),
-        ).await?;
+            db,
+            user_id,
+            &source,
+            &req.source_problem_id,
+            &req.title,
+            req.url.as_deref(),
+            req.statement.as_deref(),
+        )
+        .await?;
 
         // Link tags
         if is_new {
@@ -54,16 +55,29 @@ impl<'a> ImportService<'a> {
 
             // Skip if duplicate
             match is_duplicate_submission(db, user_id, problem_id, &verdict, code).await {
-                Ok(true) => { skipped += 1; continue; }
+                Ok(true) => {
+                    skipped += 1;
+                    continue;
+                }
                 Ok(false) => {}
-                Err(e) => { errors.push(format!("dedup check: {e}")); continue; }
+                Err(e) => {
+                    errors.push(format!("dedup check: {e}"));
+                    continue;
+                }
             }
 
             match insert_submission(
-                db, user_id, problem_id,
-                &sub.language, code, &verdict,
-                runtime_ms, memory_kb,
-            ).await {
+                db,
+                user_id,
+                problem_id,
+                &sub.language,
+                code,
+                &verdict,
+                runtime_ms,
+                memory_kb,
+            )
+            .await
+            {
                 Ok(_) => imported += 1,
                 Err(e) => errors.push(format!("{}: {}", sub.prob_num, e)),
             }
@@ -111,7 +125,10 @@ async fn find_problem_by_external(
             external_id.replace('\'', "''"),
         ),
     );
-    Ok(db.query_one(stmt).await?.and_then(|r| r.try_get_by::<i64, _>("id").ok()))
+    Ok(db
+        .query_one(stmt)
+        .await?
+        .and_then(|r| r.try_get_by::<i64, _>("id").ok()))
 }
 
 async fn insert_problem(
@@ -188,10 +205,9 @@ async fn insert_submission(
             now.to_rfc3339(),
         ),
     );
-    let row = db
-        .query_one(stmt)
-        .await?
-        .ok_or_else(|| crate::error::AppError::Internal("submission insert returned no row".into()))?;
+    let row = db.query_one(stmt).await?.ok_or_else(|| {
+        crate::error::AppError::Internal("submission insert returned no row".into())
+    })?;
     row.try_get_by::<i64, _>("id")
         .map_err(|e| crate::error::AppError::Internal(format!("submission id parse: {e}")))
 }
@@ -211,7 +227,9 @@ async fn is_duplicate_submission(
                  WHERE user_id = {} AND problem_id = {} AND verdict = '{}' \
                  AND submitted_at > NOW() - INTERVAL '1 minute' \
                  LIMIT 1",
-                user_id, problem_id, verdict.replace('\'', "''"),
+                user_id,
+                problem_id,
+                verdict.replace('\'', "''"),
             ),
         );
         return Ok(db.query_one(stmt).await?.is_some());
@@ -225,7 +243,10 @@ async fn is_duplicate_submission(
              AND md5(code) = '{}' \
              AND submitted_at > NOW() - INTERVAL '1 minute' \
              LIMIT 1",
-            user_id, problem_id, verdict.replace('\'', "''"), code_hash,
+            user_id,
+            problem_id,
+            verdict.replace('\'', "''"),
+            code_hash,
         ),
     );
     Ok(db.query_one(stmt).await?.is_some())
@@ -251,11 +272,19 @@ fn map_verdict(vjudge_status: &str) -> String {
 }
 
 fn parse_runtime_ms(s: &str) -> Option<i32> {
-    s.chars().filter(|c| c.is_ascii_digit()).collect::<String>().parse::<i32>().ok()
+    s.chars()
+        .filter(|c| c.is_ascii_digit())
+        .collect::<String>()
+        .parse::<i32>()
+        .ok()
 }
 
 fn parse_memory_kb(s: &str) -> Option<i32> {
-    s.chars().filter(|c| c.is_ascii_digit()).collect::<String>().parse::<i32>().ok()
+    s.chars()
+        .filter(|c| c.is_ascii_digit())
+        .collect::<String>()
+        .parse::<i32>()
+        .ok()
 }
 
 fn opt_str(s: Option<&str>) -> String {

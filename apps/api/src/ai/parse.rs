@@ -10,7 +10,9 @@ fn strip_think_tags(response: &str) -> String {
         let abs_start = cursor + rel_start;
         result.push_str(&response[cursor..abs_start]);
         // Find the closing tag
-        let close = lower[abs_start..].find("</think>").or_else(|| lower[abs_start..].find("</think"));
+        let close = lower[abs_start..]
+            .find("</think>")
+            .or_else(|| lower[abs_start..].find("</think"));
         if let Some(close_off) = close {
             cursor = abs_start + close_off + "</think>".len();
         } else {

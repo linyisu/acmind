@@ -89,10 +89,18 @@ pub async fn update(
     };
 
     let mut am: knowledge::ActiveModel = existing.into();
-    if let Some(p) = problem_id { am.problem_id = Set(Some(p)); }
-    if let Some(k) = kind { am.kind = Set(k.to_string()); }
-    if let Some(t) = title { am.title = Set(t.to_string()); }
-    if let Some(c) = content { am.content = Set(c.to_string()); }
+    if let Some(p) = problem_id {
+        am.problem_id = Set(Some(p));
+    }
+    if let Some(k) = kind {
+        am.kind = Set(k.to_string());
+    }
+    if let Some(t) = title {
+        am.title = Set(t.to_string());
+    }
+    if let Some(c) = content {
+        am.content = Set(c.to_string());
+    }
     am.updated_at = Set(Utc::now().into());
 
     Ok(Some(am.update(db).await?))

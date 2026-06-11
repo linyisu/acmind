@@ -1,9 +1,6 @@
 use crate::{
-    ai::repo as ai_repo,
-    error::AppResult,
-    knowledge::repo as knowledge_repo,
-    problem::repo as prob_repo,
-    submission::repo as sub_repo,
+    ai::repo as ai_repo, error::AppResult, knowledge::repo as knowledge_repo,
+    problem::repo as prob_repo, submission::repo as sub_repo,
 };
 use similar::TextDiff;
 
@@ -92,8 +89,10 @@ pub async fn collect_context(
 
     // Gather past analyses (batch)
     let submission_ids: Vec<i64> = submissions.iter().map(|s| s.id).collect();
-    let past_analyses = ai_repo::find_by_targets(db, user_id, "submission", &submission_ids).await?;
-    let past_analyses: Vec<serde_json::Value> = past_analyses.into_iter().map(|r| r.result).collect();
+    let past_analyses =
+        ai_repo::find_by_targets(db, user_id, "submission", &submission_ids).await?;
+    let past_analyses: Vec<serde_json::Value> =
+        past_analyses.into_iter().map(|r| r.result).collect();
 
     // Gather existing knowledge for this problem
     let existing = knowledge_repo::list_by_problem_id(db, user_id, problem_id).await?;
@@ -163,7 +162,8 @@ pub fn build_diff_chain(submissions: &[SubmissionSummary]) -> String {
 
 /// Build non-AC submissions as full code blocks (for error analysis).
 pub fn build_error_code_blocks(submissions: &[SubmissionSummary]) -> String {
-    let non_ac: Vec<&SubmissionSummary> = submissions.iter().filter(|s| s.verdict != "AC").collect();
+    let non_ac: Vec<&SubmissionSummary> =
+        submissions.iter().filter(|s| s.verdict != "AC").collect();
     if non_ac.is_empty() {
         return String::new();
     }
@@ -171,9 +171,12 @@ pub fn build_error_code_blocks(submissions: &[SubmissionSummary]) -> String {
     for sub in &non_ac {
         output.push_str(&format!(
             "### 提交 #{} ({}, {}, {}ms)\n```{}\n{}\n```\n\n",
-            sub.id, sub.verdict, sub.language,
+            sub.id,
+            sub.verdict,
+            sub.language,
             sub.runtime_ms.map_or("—".to_string(), |v| v.to_string()),
-            sub.language, sub.code,
+            sub.language,
+            sub.code,
         ));
     }
     output

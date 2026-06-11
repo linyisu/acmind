@@ -37,7 +37,11 @@ impl<'a> AuthService<'a> {
         repo::insert(&self.state.db, username, email, &hash).await
     }
 
-    pub async fn login(&self, username: &str, password_str: &str) -> AppResult<(repo::UserRow, String)> {
+    pub async fn login(
+        &self,
+        username: &str,
+        password_str: &str,
+    ) -> AppResult<(repo::UserRow, String)> {
         let user = repo::find_by_username(&self.state.db, username)
             .await?
             .ok_or(AppError::Unauthorized)?;

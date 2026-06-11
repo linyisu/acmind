@@ -32,11 +32,11 @@ pub async fn insert(
             now.to_rfc3339(),
         ),
     );
-    let row = db
-        .query_one(stmt)
-        .await?
-        .ok_or_else(|| crate::error::AppError::Internal("submission insert returned no row".into()))?;
-    row_to_submission(row).ok_or_else(|| crate::error::AppError::Internal("submission row parse".into()))
+    let row = db.query_one(stmt).await?.ok_or_else(|| {
+        crate::error::AppError::Internal("submission insert returned no row".into())
+    })?;
+    row_to_submission(row)
+        .ok_or_else(|| crate::error::AppError::Internal("submission row parse".into()))
 }
 
 pub async fn find_by_id(
@@ -92,11 +92,7 @@ pub async fn problem_belongs_to_user(
     Ok(db.query_one(stmt).await?.is_some())
 }
 
-pub async fn delete_by_id(
-    db: &DatabaseConnection,
-    user_id: i64,
-    id: i64,
-) -> AppResult<bool> {
+pub async fn delete_by_id(db: &DatabaseConnection, user_id: i64, id: i64) -> AppResult<bool> {
     let stmt = Statement::from_string(
         DbBackend::Postgres,
         format!(
@@ -119,14 +115,24 @@ pub fn row_to_submission(row: sea_orm::QueryResult) -> Option<SubmissionRow> {
         runtime_ms: row.try_get_by::<Option<i32>, _>("runtime_ms").ok()?,
         memory_kb: row.try_get_by::<Option<i32>, _>("memory_kb").ok()?,
         notes: row.try_get_by::<Option<String>, _>("notes").ok()?,
-        submitted_at: row.try_get_by::<chrono::DateTime<chrono::Utc>, _>("submitted_at").ok()?,
+        submitted_at: row
+            .try_get_by::<chrono::DateTime<chrono::Utc>, _>("submitted_at")
+            .ok()?,
     })
 }
 
-fn esc(s: &str) -> String { s.replace('\'', "''") }
+fn esc(s: &str) -> String {
+    s.replace('\'', "''")
+}
 fn opt_str(s: Option<&str>) -> String {
-    match s { Some(v) => format!("'{}'", esc(v)), None => "NULL".to_string() }
+    match s {
+        Some(v) => format!("'{}'", esc(v)),
+        None => "NULL".to_string(),
+    }
 }
 fn opt_i32(v: Option<i32>) -> String {
-    match v { Some(n) => n.to_string(), None => "NULL".to_string() }
+    match v {
+        Some(n) => n.to_string(),
+        None => "NULL".to_string(),
+    }
 }

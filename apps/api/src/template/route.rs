@@ -3,7 +3,9 @@ use crate::{
     error::AppResult,
     state::AppState,
     template::{
-        model::{CreateTemplateReq, ListTemplatesQuery, TemplateResp, TemplateStats, UpdateTemplateReq},
+        model::{
+            CreateTemplateReq, ListTemplatesQuery, TemplateResp, TemplateStats, UpdateTemplateReq,
+        },
         service::TemplateService,
     },
 };
@@ -17,10 +19,7 @@ pub fn protected_router() -> Router<AppState> {
     Router::new()
         .route("/templates", get(list).post(create))
         .route("/templates/stats", get(stats))
-        .route(
-            "/templates/{id}",
-            get(get_one).patch(update).delete(remove),
-        )
+        .route("/templates/{id}", get(get_one).patch(update).delete(remove))
         .route(
             "/templates/{id}/problems/{problem_id}",
             post(link_problem).delete(unlink_problem),

@@ -7,11 +7,7 @@ use crate::{
     },
     state::AppState,
 };
-use axum::{
-    extract::State,
-    routing::post,
-    Extension, Json, Router,
-};
+use axum::{extract::State, routing::post, Extension, Json, Router};
 
 pub fn protected_router() -> Router<AppState> {
     Router::new().route("/import/vjudge/problem-full", post(import_problem_full))
