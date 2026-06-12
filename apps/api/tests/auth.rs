@@ -13,7 +13,7 @@ fn make_body(json: &Value) -> Body {
 #[tokio::test]
 #[ignore = "requires TEST_DATABASE_URL; run with `cargo test -- --ignored`"]
 async fn health_returns_200() {
-    // Health endpoint doesn't need DB — construct a minimal router
+    // Health itself doesn't touch the DB; reuse the shared test router.
     let state = test_state().await;
     let app = test_router(state);
     let req = axum::http::Request::builder()
@@ -121,7 +121,7 @@ async fn register_duplicate_username_returns_409() {
 }
 
 #[tokio::test]
-async fn register_short_password_returns_400() {
+async fn register_short_password_returns_422() {
     if !has_test_db() {
         eprintln!("skipping: TEST_DATABASE_URL not set");
         return;
@@ -141,7 +141,7 @@ async fn register_short_password_returns_400() {
         .body(make_body(&body))
         .unwrap();
     let resp = app.oneshot(req).await.unwrap();
-    assert_eq!(resp.status(), axum::http::StatusCode::BAD_REQUEST);
+    assert_eq!(resp.status(), axum::http::StatusCode::UNPROCESSABLE_ENTITY);
 }
 
 #[tokio::test]

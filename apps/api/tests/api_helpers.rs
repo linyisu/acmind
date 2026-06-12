@@ -1,8 +1,7 @@
 use acmind_api::{ai::provider::NoopLlmProvider, auth::jwt, state::AppState};
 use acmind_migration::MigratorTrait;
-use axum::extract::connect_info::MockConnectInfo;
 use sea_orm::Database;
-use std::{net::SocketAddr, sync::Arc};
+use std::sync::Arc;
 use tokio::sync::OnceCell;
 
 static TEST_STATE: OnceCell<AppState> = OnceCell::const_new();
@@ -32,11 +31,28 @@ pub async fn test_state() -> AppState {
 }
 
 pub fn test_router(state: AppState) -> axum::Router {
-    acmind_api::build_router(state).layer(MockConnectInfo(test_client_addr()))
-}
+    let auth_layer = axum::middleware::from_fn_with_state(
+        state.clone(),
+        acmind_api::auth::middleware::require_auth,
+    );
 
-fn test_client_addr() -> SocketAddr {
-    SocketAddr::from(([127, 0, 0, 1], 3000))
+    let api = axum::Router::new()
+        .merge(acmind_api::auth::route::public_router())
+        .merge(acmind_api::auth::route::protected_router().route_layer(auth_layer.clone()))
+        .merge(acmind_api::problem::route::protected_router().route_layer(auth_layer.clone()))
+        .merge(acmind_api::submission::route::protected_router().route_layer(auth_layer.clone()))
+        .merge(acmind_api::knowledge::route::protected_router().route_layer(auth_layer.clone()))
+        .merge(acmind_api::tag::route::protected_router().route_layer(auth_layer.clone()))
+        .merge(acmind_api::analysis::route::protected_router().route_layer(auth_layer.clone()))
+        .merge(acmind_api::import::route::protected_router().route_layer(auth_layer.clone()))
+        .merge(acmind_api::ai::route::protected_router().route_layer(auth_layer.clone()))
+        .merge(acmind_api::task::route::protected_router().route_layer(auth_layer.clone()))
+        .merge(acmind_api::template::route::protected_router().route_layer(auth_layer));
+
+    axum::Router::new()
+        .merge(acmind_api::health::router())
+        .nest("/api/v1", api)
+        .with_state(state)
 }
 
 /// Issue a valid JWT token for the given user.
