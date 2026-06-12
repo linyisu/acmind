@@ -85,7 +85,7 @@ pub async fn collect_context(
 
     // Keep all submissions, sorted by time
     let mut submissions = all_submissions;
-    submissions.sort_by(|a, b| a.submitted_at.cmp(&b.submitted_at));
+    submissions.sort_by_key(|a| a.submitted_at);
 
     // Gather past analyses (batch)
     let submission_ids: Vec<i64> = submissions.iter().map(|s| s.id).collect();

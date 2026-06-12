@@ -2,14 +2,11 @@ use acmind_api::{ai::provider::NoopLlmProvider, auth::jwt, state::AppState};
 use acmind_migration::MigratorTrait;
 use sea_orm::Database;
 use std::sync::Arc;
+use tokio::sync::OnceCell;
 
-/// Create an AppState backed by a real PostgreSQL test database.
-///
-/// Set `TEST_DATABASE_URL` env var to enable integration tests.
-/// Example: `postgres://acmind:acmind@localhost:5432/acmind_test`
-///
-/// Panics if `TEST_DATABASE_URL` is not set — call `skip_if_no_db()` first.
-pub async fn test_state() -> AppState {
+static TEST_STATE: OnceCell<AppState> = OnceCell::const_new();
+
+async fn init_test_state() -> AppState {
     let db_url = std::env::var("TEST_DATABASE_URL")
         .expect("TEST_DATABASE_URL must be set for integration tests");
     let db = Database::connect(&db_url)
@@ -29,9 +26,33 @@ pub async fn test_state() -> AppState {
     }
 }
 
-/// Build the full axum router with a test AppState.
+pub async fn test_state() -> AppState {
+    TEST_STATE.get_or_init(init_test_state).await.clone()
+}
+
 pub fn test_router(state: AppState) -> axum::Router {
-    acmind_api::build_router(state)
+    let auth_layer = axum::middleware::from_fn_with_state(
+        state.clone(),
+        acmind_api::auth::middleware::require_auth,
+    );
+
+    let api = axum::Router::new()
+        .merge(acmind_api::auth::route::public_router())
+        .merge(acmind_api::auth::route::protected_router().route_layer(auth_layer.clone()))
+        .merge(acmind_api::problem::route::protected_router().route_layer(auth_layer.clone()))
+        .merge(acmind_api::submission::route::protected_router().route_layer(auth_layer.clone()))
+        .merge(acmind_api::knowledge::route::protected_router().route_layer(auth_layer.clone()))
+        .merge(acmind_api::tag::route::protected_router().route_layer(auth_layer.clone()))
+        .merge(acmind_api::analysis::route::protected_router().route_layer(auth_layer.clone()))
+        .merge(acmind_api::import::route::protected_router().route_layer(auth_layer.clone()))
+        .merge(acmind_api::ai::route::protected_router().route_layer(auth_layer.clone()))
+        .merge(acmind_api::task::route::protected_router().route_layer(auth_layer.clone()))
+        .merge(acmind_api::template::route::protected_router().route_layer(auth_layer));
+
+    axum::Router::new()
+        .merge(acmind_api::health::router())
+        .nest("/api/v1", api)
+        .with_state(state)
 }
 
 /// Issue a valid JWT token for the given user.
