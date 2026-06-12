@@ -10,6 +10,7 @@ use sea_orm::{
 };
 
 /// Insert a new template with tags and problem associations.
+#[allow(clippy::too_many_arguments)]
 pub async fn insert(
     db: &DatabaseConnection,
     user_id: i64,
@@ -155,6 +156,7 @@ pub async fn problem_ids(db: &DatabaseConnection, template_id: i64) -> AppResult
 }
 
 /// Update a template (partial fields).
+#[allow(clippy::too_many_arguments)]
 pub async fn update(
     db: &DatabaseConnection,
     user_id: i64,
@@ -329,7 +331,7 @@ pub async fn stats_by_category(
         .into_iter()
         .map(|(category, count)| CategoryCount { category, count })
         .collect();
-    result.sort_by(|a, b| b.count.cmp(&a.count));
+    result.sort_by_key(|b| std::cmp::Reverse(b.count));
     Ok(result)
 }
 
@@ -351,7 +353,7 @@ pub async fn stats_by_language(
         .into_iter()
         .map(|(language, count)| LanguageCount { language, count })
         .collect();
-    result.sort_by(|a, b| b.count.cmp(&a.count));
+    result.sort_by_key(|b| std::cmp::Reverse(b.count));
     Ok(result)
 }
 
