@@ -1,15 +1,13 @@
 use acmind_api::{ai::provider::NoopLlmProvider, auth::jwt, state::AppState};
 use acmind_migration::MigratorTrait;
+use axum::extract::connect_info::MockConnectInfo;
 use sea_orm::Database;
-use std::sync::Arc;
+use std::{net::SocketAddr, sync::Arc};
+use tokio::sync::OnceCell;
 
-/// Create an AppState backed by a real PostgreSQL test database.
-///
-/// Set `TEST_DATABASE_URL` env var to enable integration tests.
-/// Example: `postgres://acmind:acmind@localhost:5432/acmind_test`
-///
-/// Panics if `TEST_DATABASE_URL` is not set — call `skip_if_no_db()` first.
-pub async fn test_state() -> AppState {
+static TEST_STATE: OnceCell<AppState> = OnceCell::const_new();
+
+async fn init_test_state() -> AppState {
     let db_url = std::env::var("TEST_DATABASE_URL")
         .expect("TEST_DATABASE_URL must be set for integration tests");
     let db = Database::connect(&db_url)
@@ -29,9 +27,16 @@ pub async fn test_state() -> AppState {
     }
 }
 
-/// Build the full axum router with a test AppState.
+pub async fn test_state() -> AppState {
+    TEST_STATE.get_or_init(init_test_state).await.clone()
+}
+
 pub fn test_router(state: AppState) -> axum::Router {
-    acmind_api::build_router(state)
+    acmind_api::build_router(state).layer(MockConnectInfo(test_client_addr()))
+}
+
+fn test_client_addr() -> SocketAddr {
+    SocketAddr::from(([127, 0, 0, 1], 3000))
 }
 
 /// Issue a valid JWT token for the given user.
