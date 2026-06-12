@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <title>ACMind Importer 设置</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <main>
+      <h1>ACMind Importer</h1>
+
+      <section class="card">
+        <label class="field-label" for="api-url">ACMind API URL</label>
+        <input
+          id="api-url"
+          type="text"
+          class="field-input"
+          placeholder="http://localhost:8080"
+        />
+        <p class="hint">访问 ACMind 时会自动同步登录 Token，无需手动配置。</p>
+
+        <div class="row">
+          <button id="save" class="btn btn-primary">保存</button>
+          <span id="status" class="status"></span>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>连接状态</h2>
+        <div class="status-row">
+          <span id="conn-dot" class="dot"></span>
+          <span id="conn-text">正在检测...</span>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>使用方法</h2>
+        <ol>
+          <li>访问 OJ 题目页（如 vjudge.net 题目页）</li>
+          <li>点击工具栏的 ACMind 图标</li>
+          <li>页面顶部出现进度条，跑完即导入完成</li>
+        </ol>
+      </section>
+    </main>
+
+    <script src="options.js"></script>
+  </body>
+</html>
