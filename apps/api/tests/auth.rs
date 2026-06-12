@@ -11,7 +11,6 @@ fn make_body(json: &Value) -> Body {
 }
 
 #[tokio::test]
-#[ignore = "requires TEST_DATABASE_URL; run with `cargo test -- --ignored`"]
 async fn health_returns_200() {
     // Health itself doesn't touch the DB; reuse the shared test router.
     let state = test_state().await;
@@ -184,7 +183,6 @@ async fn login_wrong_password_returns_401() {
 }
 
 #[tokio::test]
-#[ignore = "requires TEST_DATABASE_URL; run with `cargo test -- --ignored`"]
 async fn me_without_token_returns_401() {
     let state = test_state().await;
     let app = test_router(state);
@@ -197,7 +195,6 @@ async fn me_without_token_returns_401() {
 }
 
 #[tokio::test]
-#[ignore = "requires TEST_DATABASE_URL; run with `cargo test -- --ignored`"]
 async fn me_with_invalid_token_returns_401() {
     let state = test_state().await;
     let app = test_router(state);
@@ -211,7 +208,6 @@ async fn me_with_invalid_token_returns_401() {
 }
 
 #[tokio::test]
-#[ignore = "requires TEST_DATABASE_URL; run with `cargo test -- --ignored`"]
 async fn protected_endpoint_without_token_returns_401() {
     let state = test_state().await;
     let app = test_router(state);
