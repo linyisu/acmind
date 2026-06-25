@@ -70,11 +70,11 @@ mod tests {
 
     #[test]
     fn from_env_minimal() {
-        std::env::set_var("DATABASE_URL", "postgres://localhost/x");
+        std::env::set_var("DATABASE_URL", "mysql://localhost/x");
         std::env::set_var("JWT_SECRET", "secret");
         std::env::set_var("API_PORT", "9000");
         let cfg = Config::from_env().unwrap();
         assert_eq!(cfg.api_port, 9000);
-        assert_eq!(cfg.database_url, "postgres://localhost/x");
+        assert_eq!(cfg.database_url, "mysql://localhost/x");
     }
 }
