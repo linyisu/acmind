@@ -19,11 +19,11 @@ impl MigrationTrait for Migration {
                     .col(ColumnDef::new(Task::TargetId).big_integer().not_null())
                     .col(
                         ColumnDef::new(Task::Progress)
-                            .json_binary()
+                            .json()
                             .not_null()
-                            .default(Expr::cust("'[]'::jsonb")),
+                            .default(Expr::value("[]")),
                     )
-                    .col(ColumnDef::new(Task::Result).json_binary().null())
+                    .col(ColumnDef::new(Task::Result).json().null())
                     .col(ColumnDef::new(Task::Error).text().null())
                     .col(
                         timestamp_with_time_zone(Task::CreatedAt)

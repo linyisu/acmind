@@ -1,15 +1,17 @@
 services:
-  postgres:
-    image: postgres:16-alpine
+  mysql:
+    image: mysql:8.0
     environment:
-      POSTGRES_USER: acmind
-      POSTGRES_PASSWORD: acmind
-      POSTGRES_DB: acmind
-    ports: ["5432:5432"]
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: acmind
+      MYSQL_USER: acmind
+      MYSQL_PASSWORD: acmind
+    ports: ["3306:3306"]
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - mysql_data:/var/lib/mysql
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U acmind -h localhost"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "acmind", "-pacmind"]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -21,13 +23,13 @@ services:
     # Load the whole .env into the container, exactly like a local `cargo run`
     # (DATABASE_URL, JWT, RATE_LIMIT, LLM_*, …). DATABASE_URL in .env is the
     # switch that decides which database this stack talks to:
-    #   full local docker  → postgres://acmind:acmind@postgres:5432/acmind
-    #   server / external  → postgres://<user>:<pass>@<host>:<port>/acmind
+    #   full local docker  → mysql://acmind:acmind@mysql:3306/acmind
+    #   server / external  → mysql://<user>:<pass>@<host>:<port>/acmind
     env_file:
       - .env
     ports: ["8080:8080"]
     depends_on:
-      postgres:
+      mysql:
         condition: service_healthy
 
   web:
@@ -41,4 +43,4 @@ services:
       - api
 
 volumes:
-  postgres_data:
+  mysql_data:

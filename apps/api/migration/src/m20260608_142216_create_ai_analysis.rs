@@ -19,7 +19,7 @@ impl MigrationTrait for Migration {
                             .big_integer()
                             .not_null(),
                     )
-                    .col(ColumnDef::new(AiAnalysis::Result).json_binary().not_null())
+                    .col(ColumnDef::new(AiAnalysis::Result).json().not_null())
                     .col(
                         timestamp_with_time_zone(AiAnalysis::CreatedAt)
                             .default(Expr::current_timestamp()),
