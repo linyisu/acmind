@@ -65,7 +65,7 @@ AI 模块结构：
 
 ## SeaORM Schema 变更工作流
 
-acmind 用 SeaORM 管理 Postgres schema。**所有 schema 变更必须走 migration 文件，绝不直接改老 migration**。
+acmind 用 SeaORM 管理 MySQL schema。**所有 schema 变更必须走 migration 文件，绝不直接改老 migration**。
 
 ### 改 schema 的标准流程
 
@@ -79,7 +79,7 @@ acmind 用 SeaORM 管理 Postgres schema。**所有 schema 变更必须走 migra
    ```
 3. **同步 entity 代码**：
    ```bash
-   pnpm exec sea-orm-cli generate entity -u postgres://acmind:acmind@localhost:5432/acmind -o apps/api/src/entity
+   pnpm exec sea-orm-cli generate entity -u mysql://acmind:acmind@localhost:3306/acmind -o apps/api/src/entity
    ```
    - 这一步**会重写 entity 目录里的所有 model 文件**（自动生成，不要手改）
    - 如果新增了外键关系，**手工检查 `Relation` enum 和 `impl Related<...>` 是否需要补**
@@ -89,4 +89,4 @@ acmind 用 SeaORM 管理 Postgres schema。**所有 schema 变更必须走 migra
 - **已存在的 migration 文件**（已跑过 DB 的）**不要改 up/down 函数**——只能新建一个 migration 去"修正"（生产场景）
 - 当前项目还在开发阶段，**已经写过的 migration 文件可以直接改**，配合 `docker compose down -v` 重建 DB
 - `entity/` 目录是自动生成代码，**不要手改**
-- 新加表前先想清楚：哪些列 NOT NULL / UNIQUE / 需要 INDEX / 用 `timestamptz` 还是 `timestamp` / 软删还是硬删
+- 新加表前先想清楚：哪些列 NOT NULL / UNIQUE / 需要 INDEX / 用 `timestamp` 还是 `datetime` / 软删还是硬删

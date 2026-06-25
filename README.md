@@ -25,11 +25,11 @@ docker compose up -d --build
 ### 本地开发
 
 ```bash
-docker compose up -d postgres
+docker compose up -d mysql
 
 # 后端
 cd apps/api
-DATABASE_URL=postgres://acmind:acmind@localhost:5432/acmind \
+DATABASE_URL=mysql://acmind:acmind@localhost:3306/acmind \
   JWT_SECRET=devsecret LLM_PROVIDER=noop cargo run
 
 # 前端
@@ -40,7 +40,7 @@ cd apps/web && pnpm install && pnpm dev
 
 | 变量 | 说明 | 默认值 |
 |------|------|--------|
-| `DATABASE_URL` | Postgres 连接串 | — |
+| `DATABASE_URL` | MySQL 连接串 | — |
 | `JWT_SECRET` | JWT 签名密钥 | — |
 | `LLM_PROVIDER` | AI 提供商（`openai` / `noop`） | noop |
 | `LLM_API_KEY` | AI API Key | — |
@@ -52,7 +52,7 @@ cd apps/web && pnpm install && pnpm dev
 
 ## 技术栈
 
-**后端：** Rust · Axum · SeaORM · PostgreSQL
+**后端：** Rust · Axum · SeaORM · MySQL 9.7
 **前端：** React · TypeScript · Vite · Tailwind CSS · shadcn/ui
 **AI：** OpenAI 兼容 API，可配置任意 provider
 

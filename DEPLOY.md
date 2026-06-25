@@ -68,18 +68,18 @@ docker compose logs -f web
 docker compose exec api bash
 
 # 直接连数据库
-docker compose exec postgres psql -U acmind acmind
+docker compose exec mysql mysql -u acmind -pacmind acmind
 
 # 备份数据库
-docker compose exec postgres pg_dump -U acmind acmind > backup-$(date +%F).sql
+docker compose exec mysql mysqldump -u acmind -pacmind acmind > backup-$(date +%F).sql
 
 # 恢复数据库
-cat backup-2026-06-10.sql | docker compose exec -T postgres psql -U acmind acmind
+cat backup-2026-06-10.sql | docker compose exec -i mysql mysql -u acmind -pacmind acmind
 ```
 
 ## 注意事项
 
-- **数据卷 `postgres_data`** — 包含所有用户数据，除非显式删除否则一直保留
+- **数据卷 `mysql_data`** — 包含所有用户数据，除非显式删除否则一直保留
 - **环境变量** — 服务器上的 `.env` 是「真实配置」，本地 `.env` 是「开发配置」，两套互不影响
-- **端口冲突** — 默认 web 走 5173、API 走 8080、Postgres 走 5432，服务器上如果被占可以改 `.env`
+- **端口冲突** — 默认 web 走 5173、API 走 8080、MySQL 走 3306，服务器上如果被占可以改 `.env`
 - **HTTPS** — 当前 docker-compose 没有反向代理，生产环境建议前面加 nginx/caddy 套一层
