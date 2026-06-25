@@ -10,23 +10,28 @@ impl MigrationTrait for Migration {
     async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         // External run id (e.g. VJudge runId). Nullable: manual submissions and
         // submissions whose source fetch failed keep it NULL.
+        // MySQL: use VARCHAR instead of TEXT for indexing
         manager
             .alter_table(
                 Table::alter()
                     .table(Submission::Table)
-                    .add_column(ColumnDef::new(Submission::ExternalRunId).text().null())
+                    .add_column(ColumnDef::new(Submission::ExternalRunId).string().null())
                     .to_owned(),
             )
             .await?;
 
-        // Partial unique index: one row per (user, run id), but allow many NULLs
-        // (manual entries / failed source fetches do not collide).
+        // MySQL doesn't support partial indexes with WHERE clause
+        // Create a regular unique index instead
+        // NULL values won't violate uniqueness constraint in MySQL
         manager
-            .get_connection()
-            .execute_unprepared(
-                "CREATE UNIQUE INDEX IF NOT EXISTS idx_submission_user_run_id \
-                 ON submission (user_id, external_run_id) \
-                 WHERE external_run_id IS NOT NULL",
+            .create_index(
+                Index::create()
+                    .name("idx_submission_user_run_id")
+                    .table(Submission::Table)
+                    .col(Submission::UserId)
+                    .col(Submission::ExternalRunId)
+                    .unique()
+                    .to_owned(),
             )
             .await?;
 
@@ -35,8 +40,12 @@ impl MigrationTrait for Migration {
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         manager
-            .get_connection()
-            .execute_unprepared("DROP INDEX IF EXISTS idx_submission_user_run_id")
+            .drop_index(
+                Index::drop()
+                    .name("idx_submission_user_run_id")
+                    .table(Submission::Table)
+                    .to_owned(),
+            )
             .await?;
 
         manager
