@@ -1,6 +1,6 @@
 services:
   mysql:
-    image: mysql:8.0
+    image: mysql:9.7
     environment:
       MYSQL_ROOT_PASSWORD: rootpass
       MYSQL_DATABASE: acmind

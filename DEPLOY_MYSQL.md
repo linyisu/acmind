@@ -151,11 +151,12 @@ docker compose up -d --build
 
 ## 📝 注意事项
 
-1. ✅ 数据持久化在 Docker volume `mysql_data` 中
-2. ✅ 生产环境请修改默认密码
-3. ✅ 建议定期备份数据库
-4. ✅ 使用 HTTPS（配置 SSL 证书）
-5. ✅ 配置防火墙，只开放必要端口
+1. ✅ 使用 MySQL 9.7（最新稳定版）
+2. ✅ 数据持久化在 Docker volume `mysql_data` 中
+3. ✅ 生产环境请修改默认密码
+4. ✅ 建议定期备份数据库
+5. ✅ 使用 HTTPS（配置 SSL 证书）
+6. ✅ 配置防火墙，只开放必要端口
 
 ## 🔄 本地开发
 
