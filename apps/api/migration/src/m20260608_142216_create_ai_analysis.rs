@@ -21,7 +21,7 @@ impl MigrationTrait for Migration {
                     )
                     .col(ColumnDef::new(AiAnalysis::Result).json().not_null())
                     .col(
-                        timestamp_with_time_zone(AiAnalysis::CreatedAt)
+                        timestamp(AiAnalysis::CreatedAt)
                             .default(Expr::current_timestamp()),
                     )
                     .foreign_key(

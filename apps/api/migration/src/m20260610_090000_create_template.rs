@@ -22,7 +22,7 @@ impl MigrationTrait for Migration {
                     .col(string(Template::Category).default("other"))
                     .col(string(Template::Language).default("cpp"))
                     .col(text(Template::Code))
-                    .col(text(Template::Description).default(""))
+                    .col(text(Template::Description))  // MySQL: TEXT 不能有默认值，应用层保证提供值
                     .col(string_null(Template::TimeComplexity))
                     .col(string_null(Template::SpaceComplexity))
                     .col(string(Template::Source).default("manual"))
@@ -30,11 +30,11 @@ impl MigrationTrait for Migration {
                     .col(integer_null(Template::Difficulty))
                     .col(integer(Template::UsageCount).default(0))
                     .col(
-                        timestamp_with_time_zone(Template::CreatedAt)
+                        timestamp(Template::CreatedAt)
                             .default(Expr::current_timestamp()),
                     )
                     .col(
-                        timestamp_with_time_zone(Template::UpdatedAt)
+                        timestamp(Template::UpdatedAt)
                             .default(Expr::current_timestamp()),
                     )
                     .foreign_key(
@@ -128,7 +128,7 @@ impl MigrationTrait for Migration {
                     .col(big_integer(TemplateProblem::TemplateId))
                     .col(big_integer(TemplateProblem::ProblemId))
                     .col(
-                        timestamp_with_time_zone(TemplateProblem::CreatedAt)
+                        timestamp(TemplateProblem::CreatedAt)
                             .default(Expr::current_timestamp()),
                     )
                     .primary_key(

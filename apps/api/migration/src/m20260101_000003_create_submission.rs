@@ -24,7 +24,7 @@ impl MigrationTrait for Migration {
                     .col(integer_null(Submission::MemoryKb))
                     .col(text_null(Submission::Notes))
                     .col(
-                        timestamp_with_time_zone(Submission::SubmittedAt)
+                        timestamp(Submission::SubmittedAt)
                             .default(Expr::current_timestamp()),
                     )
                     .foreign_key(

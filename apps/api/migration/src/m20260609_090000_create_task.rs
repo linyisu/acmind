@@ -26,17 +26,17 @@ impl MigrationTrait for Migration {
                     .col(ColumnDef::new(Task::Result).json().null())
                     .col(ColumnDef::new(Task::Error).text().null())
                     .col(
-                        timestamp_with_time_zone(Task::CreatedAt)
+                        timestamp(Task::CreatedAt)
                             .default(Expr::current_timestamp()),
                     )
                     .col(
                         ColumnDef::new(Task::StartedAt)
-                            .timestamp_with_time_zone()
+                            .timestamp()
                             .null(),
                     )
                     .col(
                         ColumnDef::new(Task::CompletedAt)
-                            .timestamp_with_time_zone()
+                            .timestamp()
                             .null(),
                     )
                     .foreign_key(

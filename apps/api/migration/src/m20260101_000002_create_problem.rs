@@ -22,11 +22,11 @@ impl MigrationTrait for Migration {
                     .col(integer_null(Problem::Difficulty))
                     .col(text_null(Problem::Statement))
                     .col(
-                        timestamp_with_time_zone(Problem::CreatedAt)
+                        timestamp(Problem::CreatedAt)
                             .default(Expr::current_timestamp()),
                     )
                     .col(
-                        timestamp_with_time_zone(Problem::UpdatedAt)
+                        timestamp(Problem::UpdatedAt)
                             .default(Expr::current_timestamp()),
                     )
                     .foreign_key(

@@ -21,11 +21,11 @@ impl MigrationTrait for Migration {
                     .col(string(Knowledge::Title))
                     .col(text(Knowledge::Content))
                     .col(
-                        timestamp_with_time_zone(Knowledge::CreatedAt)
+                        timestamp(Knowledge::CreatedAt)
                             .default(Expr::current_timestamp()),
                     )
                     .col(
-                        timestamp_with_time_zone(Knowledge::UpdatedAt)
+                        timestamp(Knowledge::UpdatedAt)
                             .default(Expr::current_timestamp()),
                     )
                     .foreign_key(
