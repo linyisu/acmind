@@ -61,16 +61,19 @@ async function fetchSourceCode(runId) {
   for (let attempt = 0; attempt < MAX_SOURCE_RETRIES; attempt++) {
     let resp;
     try {
-      resp = await fetch(`${VJUDGE_ORIGIN}/solution/data/${runId}?inPage=true`, {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-          "X-Requested-With": "XMLHttpRequest",
-          Accept: "application/json, text/javascript, */*; q=0.01",
+      resp = await fetch(
+        `${VJUDGE_ORIGIN}/solution/data/${runId}?inPage=true`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+            "X-Requested-With": "XMLHttpRequest",
+            Accept: "application/json, text/javascript, */*; q=0.01",
+          },
+          body: "shareCode=",
         },
-        body: "shareCode=",
-      });
+      );
     } catch {
       // Network error — back off and retry.
       lastStatus = 0;
@@ -113,7 +116,8 @@ const HTML_ENTITIES = {
   "&#39;": "'",
   "&nbsp;": " ",
 };
-const decodeEntities = (s) => s.replace(/&(?:lt|gt|amp|quot|#39|nbsp);/g, (m) => HTML_ENTITIES[m]);
+const decodeEntities = (s) =>
+  s.replace(/&(?:lt|gt|amp|quot|#39|nbsp);/g, (m) => HTML_ENTITIES[m]);
 
 function extractPageJson(html, marker) {
   const markerIdx = html.indexOf(marker);
@@ -124,7 +128,9 @@ function extractPageJson(html, marker) {
   const closeStart = html.indexOf("</textarea>", openEnd);
   if (closeStart === -1) return null;
   try {
-    return JSON.parse(decodeEntities(html.substring(openEnd, closeStart).trim()));
+    return JSON.parse(
+      decodeEntities(html.substring(openEnd, closeStart).trim()),
+    );
   } catch {
     return null;
   }
@@ -151,22 +157,23 @@ function tablesToMarkdown(html) {
   let headerRow = null;
 
   for (const tableMatch of html.matchAll(/<table[^>]*>([\s\S]*?)<\/table>/gi)) {
-    for (const trMatch of tableMatch[1].matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi)) {
+    for (const trMatch of tableMatch[1].matchAll(
+      /<tr[^>]*>([\s\S]*?)<\/tr>/gi,
+    )) {
       const cells = [];
-      for (const tdMatch of trMatch[1].matchAll(/<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/gi)) {
+      for (const tdMatch of trMatch[1].matchAll(
+        /<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/gi,
+      )) {
         const text = decodeEntities(
-          tdMatch[1]
-            .replace(/<br\s*\/?>/gi, "\n")
-            .replace(/<[^>]+>/g, ""),
-        )
-          .trim()
-          .replace(/\n/g, "<br>");
+          tdMatch[1].replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, ""),
+        ).trim();
         cells.push(text);
       }
       if (cells.length === 0) continue;
 
       if (headerRow !== null) {
-        const isDup = cells.length === headerRow.length &&
+        const isDup =
+          cells.length === headerRow.length &&
           cells.every((c, i) => c === headerRow[i]);
         if (isDup) continue;
       }
@@ -177,12 +184,38 @@ function tablesToMarkdown(html) {
 
   if (allRows.length === 0) return "";
 
+  const isIOTable =
+    headerRow &&
+    headerRow.length === 2 &&
+    (headerRow[0].toLowerCase().includes("input") ||
+      headerRow[0].toLowerCase().includes("输入")) &&
+    (headerRow[1].toLowerCase().includes("output") ||
+      headerRow[1].toLowerCase().includes("输出"));
+
+  if (isIOTable && allRows.length > 1) {
+    const inputLines = [];
+    const outputLines = [];
+
+    for (let i = 1; i < allRows.length; i++) {
+      const row = allRows[i];
+      if (row[0]) inputLines.push(row[0]);
+      if (row[1]) outputLines.push(row[1]);
+    }
+
+    const input = inputLines.join("\n");
+    const output = outputLines.join("\n");
+
+    return `\n**Input:**\n\`\`\`\n${input}\n\`\`\`\n\n**Output:**\n\`\`\`\n${output}\n\`\`\`\n`;
+  }
+
   const colCount = allRows[0].length;
   const sep = `| ${Array(colCount).fill(":---:").join(" | ")} |`;
   const lines = [];
   allRows.forEach((row, i) => {
     while (row.length < colCount) row.push("");
-    lines.push(`| ${row.map((c) => c.replace(/\|/g, "\\|")).join(" | ")} |`);
+    lines.push(
+      `| ${row.map((c) => c.replace(/\n/g, " ").replace(/\|/g, "\\|")).join(" | ")} |`,
+    );
     if (i === 0) lines.push(sep);
   });
   return `\n${lines.join("\n")}\n`;
@@ -210,12 +243,31 @@ function stripHtml(html) {
       .replace(/<style[\s\S]*?<\/style>/gi, "")
       .replace(/<img[^>]*src="([^"]*)"[^>]*\/?>/gi, "![]($1)")
       .replace(/(<table[^>]*>[\s\S]*?<\/table>)+/gi, tablesToMarkdown)
-      .replace(/<pre[^>]*>/gi, "\n```text\n")
-      .replace(/<\/pre>/gi, "\n```\n")
+      .replace(/<pre[^>]*>([\s\S]*?)<\/pre>/gi, (match, content) => {
+        const text = content
+          .replace(/<br\s*\/?>/gi, "\n")
+          .replace(/<[^>]+>/gi, "")
+          .trim();
+        const hasLatex = /\$|\\\(|\\\[/.test(text);
+        if (hasLatex) {
+          return (
+            "\n" +
+            text
+              .split("\n")
+              .map((line) => `> ${line}`)
+              .join("\n") +
+            "\n"
+          );
+        } else {
+          return `\n\`\`\`text\n${text}\n\`\`\`\n`;
+        }
+      })
       .replace(/<br\s*\/?>/gi, "\n")
       .replace(/<\/(div|p|h[1-6]|li|section|ul|ol)>/gi, "\n")
       .replace(/<[^>]+>/gi, ""),
   )
+    .replace(/\\\[(.+?)\\\]/g, (_, m) => `\n$$${m.trim()}$$\n`) // \[...\] -> $$...$$
+    .replace(/\\\((.+?)\\\)/g, (_, m) => `$${m.trim()}$`) // \(...\) -> $...$
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
@@ -303,7 +355,10 @@ function buildStatusUrl({ draw, start, un, ojId = "All", probNum = "" }) {
   return `${VJUDGE_ORIGIN}/status/data?${params}`;
 }
 
-async function scrapeProblemMetadata(progress, baseRange = [0, PCT_AFTER_PROBLEM]) {
+async function scrapeProblemMetadata(
+  progress,
+  baseRange = [0, PCT_AFTER_PROBLEM],
+) {
   const sourceProblemId = extractSourceProblemId();
   if (!sourceProblemId) throw new Error("无法从 URL 中提取问题 ID");
 
@@ -325,7 +380,10 @@ async function scrapeProblemMetadata(progress, baseRange = [0, PCT_AFTER_PROBLEM
       })
       .join("\n\n");
 
-  progress({ message: "获取题面描述", pct: Math.floor((pctStart + pctEnd) / 2) });
+  progress({
+    message: "获取题面描述",
+    pct: Math.floor((pctStart + pctEnd) / 2),
+  });
 
   if (data?.descBriefs?.[0]) {
     const desc = data.descBriefs[0];
@@ -341,7 +399,8 @@ async function scrapeProblemMetadata(progress, baseRange = [0, PCT_AFTER_PROBLEM
         try {
           const altHtml = await fetchText(`${VJUDGE_ORIGIN}${altPath[0]}`);
           const altData = extractPageJson(altHtml, "data-json-container");
-          if (altData?.sections) statement = sectionsToMarkdown(altData.sections);
+          if (altData?.sections)
+            statement = sectionsToMarkdown(altData.sections);
         } catch {}
       }
     }
@@ -370,26 +429,34 @@ async function listSubmissions({ username, ojId, probNum, progress, range }) {
   // return the full feed instead of an OJ-filtered one). So we re-filter here,
   // but normalized (case/whitespace) so formatting drift between the problem
   // page and the status feed doesn't silently drop every submission.
-  const norm = (s) => String(s ?? "").trim().toLowerCase();
+  const norm = (s) =>
+    String(s ?? "")
+      .trim()
+      .toLowerCase();
   const wantOj = norm(ojId);
   const wantProb = norm(probNum);
 
   for (let page = 0; page < MAX_STATUS_PAGES; page++) {
     // Heuristic: assume <=3 pages on average; let the bar creep towards pctEnd
     // without committing to a hard total.
-    const pct = pctStart + Math.min(pctEnd - pctStart, (pctEnd - pctStart) * (1 - 1 / (page + 1.5)));
+    const pct =
+      pctStart +
+      Math.min(pctEnd - pctStart, (pctEnd - pctStart) * (1 - 1 / (page + 1.5)));
     progress({ message: `列出提交（第 ${page + 1} 页）`, pct });
 
-    const resp = await fetchJSON(buildStatusUrl({
-      draw: page + 1,
-      start: page * PAGE_SIZE,
-      un: username,
-      ojId,
-      probNum,
-    }));
+    const resp = await fetchJSON(
+      buildStatusUrl({
+        draw: page + 1,
+        start: page * PAGE_SIZE,
+        un: username,
+        ojId,
+        probNum,
+      }),
+    );
     if (!Array.isArray(resp.data) || resp.data.length === 0) break;
 
-    const parsed = resp.data.map(parseSubmission)
+    const parsed = resp.data
+      .map(parseSubmission)
       .filter((it) => norm(it.oj) === wantOj && norm(it.probNum) === wantProb);
     items.push(...parsed);
 
@@ -455,7 +522,8 @@ async function scrapeProblemFull({ progress }) {
   }
 
   const username = await fetchCurrentUsername();
-  if (!username) throw new Error("无法确定您的 VJudge 用户名，请确认已登录 VJudge");
+  if (!username)
+    throw new Error("无法确定您的 VJudge 用户名，请确认已登录 VJudge");
 
   const submissions = await listSubmissions({
     username,

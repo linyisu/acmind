@@ -2,6 +2,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Markdown from "react-markdown";
 import remarkMath from "remark-math";
+import remarkGfm from "remark-gfm";
 import rehypeKatex from "rehype-katex";
 import { templatesApi, tagsApi, problemsApi } from "@/lib/api";
 import { TEMPLATE_CATEGORIES } from "@acmind/shared";
@@ -160,16 +161,26 @@ export default function TemplateDetailPage() {
           {/* Meta row */}
           <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mb-3">
             {t.time_complexity && (
-              <span className="flex items-center gap-1">
+              <div className="flex items-center gap-1">
                 <Clock className="h-3.5 w-3.5" />
-                时间: <span className="inline-block"><Markdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{t.time_complexity}</Markdown></span>
-              </span>
+                <span>时间:</span>
+                <div className="inline-flex knowledge-content">
+                  <Markdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex]}>
+                    {t.time_complexity}
+                  </Markdown>
+                </div>
+              </div>
             )}
             {t.space_complexity && (
-              <span className="flex items-center gap-1">
+              <div className="flex items-center gap-1">
                 <Cpu className="h-3.5 w-3.5" />
-                空间: <span className="inline-block"><Markdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{t.space_complexity}</Markdown></span>
-              </span>
+                <span>空间:</span>
+                <div className="inline-flex knowledge-content">
+                  <Markdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex]}>
+                    {t.space_complexity}
+                  </Markdown>
+                </div>
+              </div>
             )}
             {t.usage_count > 0 && (
               <span className="flex items-center gap-1">
@@ -198,7 +209,7 @@ export default function TemplateDetailPage() {
           <CardContent className="p-4">
             <h3 className="text-sm font-medium mb-2">📝 使用说明</h3>
             <div className="text-sm text-muted-foreground knowledge-content">
-              <Markdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
+              <Markdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex]}>
                 {t.description}
               </Markdown>
             </div>

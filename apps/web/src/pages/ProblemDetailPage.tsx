@@ -3,6 +3,7 @@ import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Markdown from "react-markdown";
 import remarkMath from "remark-math";
+import remarkGfm from "remark-gfm";
 import rehypeKatex from "rehype-katex";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import vscDarkPlus from "react-syntax-highlighter/dist/esm/styles/prism/vsc-dark-plus";
@@ -317,7 +318,7 @@ export default function ProblemDetailPage() {
           </CardHeader>
           <CardContent>
             <div className="statement-content">
-              <Markdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
+              <Markdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex]}>
                 {p.statement}
               </Markdown>
             </div>
@@ -522,7 +523,7 @@ export default function ProblemDetailPage() {
               <div>
                 <h4 className="text-sm font-medium mb-1">分析摘要</h4>
                 <div className="text-sm text-muted-foreground knowledge-content">
-                  <Markdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
+                  <Markdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex]}>
                     {aiResult.result.summary}
                   </Markdown>
                 </div>
@@ -614,7 +615,7 @@ export default function ProblemDetailPage() {
               <div>
                 <h4 className="text-sm font-medium mb-1">综合分析</h4>
                 <div className="text-sm text-muted-foreground knowledge-content">
-                  <Markdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
+                  <Markdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex]}>
                     {String(resultTask.result.summary)}
                   </Markdown>
                 </div>

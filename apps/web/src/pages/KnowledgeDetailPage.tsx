@@ -2,6 +2,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import Markdown from "react-markdown";
 import remarkMath from "remark-math";
+import remarkGfm from "remark-gfm";
 import rehypeKatex from "rehype-katex";
 import { knowledgeApi, problemsApi, tagsApi } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -100,7 +101,7 @@ export default function KnowledgeDetailPage() {
         </CardHeader>
         <CardContent>
           <div className="knowledge-content prose prose-invert max-w-none">
-            <Markdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
+            <Markdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex]}>
               {k.content}
             </Markdown>
           </div>

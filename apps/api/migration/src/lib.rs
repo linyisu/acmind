@@ -11,6 +11,7 @@ mod m20260609_090000_create_task;
 mod m20260610_090000_create_template;
 mod m20260610_100000_add_template_summary;
 mod m20260612_120000_add_submission_run_id;
+mod m20260615_120000_create_user_code_preference;
 
 pub struct Migrator;
 
@@ -29,6 +30,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20260610_090000_create_template::Migration),
             Box::new(m20260610_100000_add_template_summary::Migration),
             Box::new(m20260612_120000_add_submission_run_id::Migration),
+            Box::new(m20260615_120000_create_user_code_preference::Migration),
         ]
     }
 }

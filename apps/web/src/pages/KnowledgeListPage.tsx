@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Markdown from "react-markdown";
 import remarkMath from "remark-math";
+import remarkGfm from "remark-gfm";
 import rehypeKatex from "rehype-katex";
 import { knowledgeApi, problemsApi, tagsApi } from "@/lib/api";
 import type { Knowledge, KnowledgeKind, Tag } from "@acmind/shared";
@@ -213,7 +214,7 @@ function KnowledgeRow({
         </div>
       </div>
       <div className="text-sm text-muted-foreground line-clamp-2 knowledge-content">
-        <Markdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
+        <Markdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex]}>
           {k.content}
         </Markdown>
       </div>

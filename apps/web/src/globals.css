@@ -157,10 +157,20 @@ html, body, #root {
   color: var(--muted-foreground);
   margin: 0.5em 0;
 }
+
+/* Table with horizontal scroll wrapper */
 .statement-content table, .knowledge-content table {
   border-collapse: collapse;
   width: 100%;
   margin: 0.5em 0;
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.statement-content thead, .knowledge-content thead,
+.statement-content tbody, .knowledge-content tbody {
+  display: table;
+  width: 100%;
 }
 .statement-content th, .statement-content td,
 .knowledge-content th, .knowledge-content td {
@@ -172,6 +182,7 @@ html, body, #root {
   background: var(--muted);
   font-weight: 600;
 }
+
 .statement-content img, .knowledge-content img {
   max-width: 100%;
   height: auto;
@@ -180,4 +191,22 @@ html, body, #root {
   border: none;
   border-top: 1px solid var(--border);
   margin: 1em 0;
+}
+
+/* KaTeX optimization - prevent overflow and ensure proper inline rendering */
+.statement-content .katex, .knowledge-content .katex {
+  font-size: 1em;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+.statement-content .katex-display, .knowledge-content .katex-display {
+  margin: 0.5em 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+/* Inline KaTeX should not cause line breaks */
+.statement-content p .katex, .knowledge-content p .katex,
+.statement-content span .katex, .knowledge-content span .katex {
+  display: inline-block;
+  vertical-align: middle;
 }
